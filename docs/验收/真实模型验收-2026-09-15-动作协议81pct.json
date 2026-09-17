@@ -1,0 +1,848 @@
+{
+  "generatedAt": "2026-09-15T08:49:38.863Z",
+  "provider": "siliconflow",
+  "configuredModel": "deepseek-ai/DeepSeek-V4-Flash",
+  "protocol": "non_recursive_rule_actions_v1",
+  "structuredOutput": "json_schema",
+  "thinking": false,
+  "concurrency": 2,
+  "rounds": 3,
+  "totals": {
+    "cases": 75,
+    "passed": 61,
+    "failed": 14,
+    "successRate": 0.8133333333333334,
+    "firstRoundPassed": 59,
+    "firstRoundSuccessRate": 0.7866666666666666,
+    "threshold": 0.95,
+    "thresholdPassed": false,
+    "totalTokens": 55843,
+    "averageLatencyMs": 2814
+  },
+  "byCategory": {
+    "mapping": {
+      "cases": 15,
+      "passed": 15,
+      "firstRoundPassed": 15
+    },
+    "filter": {
+      "cases": 15,
+      "passed": 14,
+      "firstRoundPassed": 13
+    },
+    "join": {
+      "cases": 15,
+      "passed": 2,
+      "firstRoundPassed": 2
+    },
+    "calculation": {
+      "cases": 15,
+      "passed": 15,
+      "firstRoundPassed": 14
+    },
+    "output": {
+      "cases": 15,
+      "passed": 15,
+      "firstRoundPassed": 15
+    }
+  },
+  "results": [
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2844,
+      "totalTokens": 1221
+    },
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2170,
+      "totalTokens": 1150
+    },
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": false,
+      "repairRounds": 1,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2605,
+      "totalTokens": 1184
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2247,
+      "totalTokens": 1134
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3459,
+      "totalTokens": 1220
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3971,
+      "totalTokens": 1216
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2299,
+      "totalTokens": 1140
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2098,
+      "totalTokens": 1140
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2082,
+      "totalTokens": 1138
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2238,
+      "totalTokens": 1129
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3513,
+      "totalTokens": 1142
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1922,
+      "totalTokens": 1137
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2545,
+      "totalTokens": 1125
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2788,
+      "totalTokens": 1125
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2034,
+      "totalTokens": 1125
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 1,
+      "passed": true,
+      "firstRound": false,
+      "repairRounds": 1,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2107,
+      "totalTokens": 1254
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2011,
+      "totalTokens": 1205
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2928,
+      "totalTokens": 1203
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3397,
+      "totalTokens": 1203
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1998,
+      "totalTokens": 1201
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 7357,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：常量 已审批 缺少原始指令、已确认参数或模板配置依据"
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2326,
+      "totalTokens": 1142
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2179,
+      "totalTokens": 1141
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1844,
+      "totalTokens": 1142
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2854,
+      "totalTokens": 1079
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3152,
+      "totalTokens": 1079
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2159,
+      "totalTokens": 1079
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1712,
+      "totalTokens": 1097
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2138,
+      "totalTokens": 1097
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1983,
+      "totalTokens": 1097
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3714,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2811,
+      "totalTokens": 1424
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3345,
+      "totalTokens": 1424
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4138,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4265,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4229,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4103,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4152,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3789,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1382,
+      "error": "缺少多对一关联"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1124,
+      "error": "缺少多对一关联"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1754,
+      "error": "缺少多对一关联"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4717,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3732,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4829,
+      "error": "步骤 join_2 关联字段冲突: master_employee_id，请先重命名"
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 6251,
+      "totalTokens": 280
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 6247,
+      "totalTokens": 280
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1728,
+      "totalTokens": 266
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 4287,
+      "totalTokens": 273
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1544,
+      "totalTokens": 276
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2374,
+      "totalTokens": 281
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1331,
+      "totalTokens": 269
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 5061,
+      "totalTokens": 260
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2548,
+      "totalTokens": 269
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1324,
+      "totalTokens": 262
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1328,
+      "totalTokens": 262
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1375,
+      "totalTokens": 269
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1214,
+      "totalTokens": 264
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1236,
+      "totalTokens": 264
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1277,
+      "totalTokens": 256
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1076,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1402,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1859,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3126,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1201,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 9590,
+      "totalTokens": 1041
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3522,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 5519,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1651,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1851,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1759,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2634,
+      "totalTokens": 1042
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1238,
+      "totalTokens": 1039
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3232,
+      "totalTokens": 1039
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1220,
+      "totalTokens": 1043
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "annual-leave-settlement",
+  "version": 1,
+  "name": "年假优先抵扣",
+  "sourceKind": "leave",
+  "fieldMappings": { "关联键": "工号", "身份校验": "姓名+部门", "余额": "剩余年假" },
+  "join": { "leftField": "工号", "rightField": "工号", "identityChecks": ["姓名", "部门"] },
+  "businessRules": { "enabledForLeaveTypes": ["事假"], "annualLeaveType": "年假", "fallbackLeaveType": "事假", "minutesPerDay": 480, "order": ["起始时间", "单据编号", "源行号"], "partialSplitOrder": ["年假", "事假"] },
+  "targetTemplate": { "sheet": "导入HR 格式", "headers": ["工号", "姓名", "部门", "缺勤类别", "起始时间", "终止时间", "合计小时", "免打卡"] }
+}

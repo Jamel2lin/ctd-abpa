@@ -1,0 +1,21 @@
+{
+  "id": "hr-leave",
+  "version": 1,
+  "format": "xls",
+  "sheets": [{
+    "sheetId": "hr-leave-import",
+    "name": "导入HR 格式",
+    "headerRow": 1,
+    "maxDataRows": 65535,
+    "columns": [
+      { "columnId": "employee_id", "header": "工号", "dataType": "text", "required": true },
+      { "columnId": "employee_name", "header": "姓名", "dataType": "text", "required": true },
+      { "columnId": "department", "header": "部门", "dataType": "text", "required": true },
+      { "columnId": "leave_type", "header": "缺勤类别", "dataType": "text", "required": true },
+      { "columnId": "start_at", "header": "起始时间", "dataType": "text", "required": true },
+      { "columnId": "end_at", "header": "终止时间", "dataType": "text", "required": true },
+      { "columnId": "total_hours", "header": "合计小时", "dataType": "text", "required": true },
+      { "columnId": "attendance_exempt", "header": "免打卡", "dataType": "text", "required": true, "defaultValue": "是" }
+    ]
+  }]
+}

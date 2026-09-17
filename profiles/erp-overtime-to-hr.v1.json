@@ -1,0 +1,18 @@
+{
+  "id": "erp-overtime-to-hr",
+  "version": 1,
+  "name": "ERP 加班转 HR",
+  "sourceKind": "overtime",
+  "sheet": "Sheet1",
+  "fieldMappings": {
+    "工号": "工号", "姓名": "姓名", "部门": "部门", "职位": "职位", "起始日期": "起始日期", "申请加班": "申请加班"
+  },
+  "businessRules": {
+    "exceptionLevels": { "negativeHours": "L3", "zeroHours": "L2", "employeeNameConflict": "L3" },
+    "negativeHours": "alert_and_isolate_no_automatic_resolution",
+    "zeroHours": "keep_with_warning",
+    "employeeNameConflict": "alert_and_isolate_all_no_automatic_resolution",
+    "sourceOfTruth": { "identity": "HR Master Data", "overtimeBusinessRecord": "ERP" }
+  },
+  "targetTemplate": { "sheet": "Sheet1", "headers": ["工号", "姓名", "部门", "职位", "起始日期", "申请加班"] }
+}

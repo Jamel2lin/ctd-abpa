@@ -1,0 +1,12 @@
+{
+  "id": "oa-leave-to-hr",
+  "version": 1,
+  "name": "OA 请假转 HR",
+  "sourceKind": "leave",
+  "sheet": "流程报表导出",
+  "fieldMappings": {
+    "工号": "工号", "姓名": "申请人", "部门": "部门", "缺勤类别": "请假类型", "起始时间": "起始日期+起始时间", "终止时间": "结束日期+结束时间", "合计小时": "天*8+小时", "免打卡": "常量:是"
+  },
+  "businessRules": { "hoursPerDay": 8, "localTime": true },
+  "targetTemplate": { "sheet": "导入HR 格式", "headers": ["工号", "姓名", "部门", "缺勤类别", "起始时间", "终止时间", "合计小时", "免打卡"] }
+}

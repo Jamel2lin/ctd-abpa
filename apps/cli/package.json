@@ -1,0 +1,14 @@
+{
+  "name": "@ctd-abpa/cli",
+  "version": "0.2.0",
+  "type": "module",
+  "bin": { "bridge": "src/index.ts" },
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": {
+    "@ctd-abpa/core": "workspace:*",
+    "@ctd-abpa/excel": "workspace:*",
+    "@ctd-abpa/types": "workspace:*",
+    "commander": "^14.0.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

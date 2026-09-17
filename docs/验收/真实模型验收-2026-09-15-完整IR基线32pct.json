@@ -1,0 +1,772 @@
+{
+  "generatedAt": "2026-09-15T05:19:53.020Z",
+  "provider": "siliconflow",
+  "configuredModel": "deepseek-ai/DeepSeek-V4-Flash",
+  "structuredOutput": "json_schema",
+  "thinking": false,
+  "concurrency": 2,
+  "totals": {
+    "cases": 75,
+    "passed": 24,
+    "failed": 51,
+    "successRate": 0.32,
+    "firstRoundPassed": 24,
+    "firstRoundSuccessRate": 0.32,
+    "threshold": 0.95,
+    "thresholdPassed": false,
+    "totalTokens": 78821,
+    "averageLatencyMs": 12068
+  },
+  "byCategory": {
+    "mapping": {
+      "cases": 15,
+      "passed": 13,
+      "firstRoundPassed": 13
+    },
+    "filter": {
+      "cases": 15,
+      "passed": 2,
+      "firstRoundPassed": 2
+    },
+    "join": {
+      "cases": 15,
+      "passed": 0,
+      "firstRoundPassed": 0
+    },
+    "calculation": {
+      "cases": 15,
+      "passed": 5,
+      "firstRoundPassed": 5
+    },
+    "output": {
+      "cases": 15,
+      "passed": 4,
+      "firstRoundPassed": 4
+    }
+  },
+  "results": [
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3076,
+      "totalTokens": 6738
+    },
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3393,
+      "totalTokens": 6787
+    },
+    {
+      "id": "calculation-1",
+      "category": "calculation",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 13015,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 5980,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 17392,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "calculation-2",
+      "category": "calculation",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 15016,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: calculated"
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2974,
+      "totalTokens": 6754
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 15009,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "calculation-3",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 4512,
+      "totalTokens": 6702
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 6860,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: calculated"
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 11206,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: calculated"
+    },
+    {
+      "id": "calculation-4",
+      "category": "calculation",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 10288,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: result"
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3055,
+      "error": "未形成可预演规则: unsupported"
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 10046,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: calculated"
+    },
+    {
+      "id": "calculation-5",
+      "category": "calculation",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3691,
+      "totalTokens": 6725
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 5677,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4208,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "filter-1",
+      "category": "filter",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4514,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 64218,
+      "error": "模型调用超时"
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3038,
+      "error": "未形成可预演规则: unsupported"
+    },
+    {
+      "id": "filter-2",
+      "category": "filter",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 6247,
+      "totalTokens": 7071
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 2175,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 13253,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "filter-3",
+      "category": "filter",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 18661,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 64564,
+      "error": "模型请求与修复共享预算已耗尽"
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 19103,
+      "totalTokens": 6721
+    },
+    {
+      "id": "filter-4",
+      "category": "filter",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1931,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 21574,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 33668,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "filter-5",
+      "category": "filter",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 17706,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 7433,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 25863,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: named"
+    },
+    {
+      "id": "join-1",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 42249,
+      "error": "模型调用超时"
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 10977,
+      "error": "步骤 step_1_filter_leave 缺少已确认参数: leave_leave_employee_id"
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 23685,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-2",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 39225,
+      "error": "步骤 targetTemplate.result 缺少字段: employee_id"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 36862,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 56712,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "join-3",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3204,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 13396,
+      "error": "未形成可预演规则: unsupported"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 19247,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 步骤引用了尚不存在的输入: leave_selected"
+    },
+    {
+      "id": "join-4",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 10167,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 5331,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 14351,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "join-5",
+      "category": "join",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 8412,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3128,
+      "totalTokens": 370
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2740,
+      "totalTokens": 334
+    },
+    {
+      "id": "mapping-1",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 15944,
+      "totalTokens": 415
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1052,
+      "totalTokens": 350
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1129,
+      "totalTokens": 363
+    },
+    {
+      "id": "mapping-2",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1399,
+      "totalTokens": 397
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1353,
+      "error": "employeeId 未正确映射到人员代号"
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1406,
+      "totalTokens": 411
+    },
+    {
+      "id": "mapping-3",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 12909,
+      "totalTokens": 375
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1289,
+      "totalTokens": 346
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 919,
+      "error": "employeeId 未正确映射到人员代号"
+    },
+    {
+      "id": "mapping-4",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1198,
+      "totalTokens": 348
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 1,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3017,
+      "totalTokens": 444
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 1947,
+      "totalTokens": 365
+    },
+    {
+      "id": "mapping-5",
+      "category": "mapping",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2995,
+      "totalTokens": 401
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 2391,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1669,
+      "error": "未形成可预演规则: clarification_required"
+    },
+    {
+      "id": "output-1",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 3157,
+      "totalTokens": 6601
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 5718,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：条件未逐项落实：不要改变模板（未找到排除“改变模板”的否定筛选节点）"
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 35052,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：条件未逐项落实：不要改变模板（未找到排除“改变模板”的否定筛选节点）"
+    },
+    {
+      "id": "output-2",
+      "category": "output",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 21814,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 11886,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 21891,
+      "totalTokens": 6601
+    },
+    {
+      "id": "output-3",
+      "category": "output",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 6783,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 输出引用了不存在的数据集: result"
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 3934,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 2,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4839,
+      "error": "模型 RuleDraft 修复超过两轮，转人工澄清：模型结构错误: 可提议结果必须包含规则草案"
+    },
+    {
+      "id": "output-4",
+      "category": "output",
+      "round": 3,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2475,
+      "totalTokens": 6604
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 1,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 4486,
+      "error": "步骤 targetTemplate.result 缺少字段: employee_id"
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 2,
+      "passed": true,
+      "firstRound": true,
+      "repairRounds": 0,
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "latencyMs": 2079,
+      "totalTokens": 6598
+    },
+    {
+      "id": "output-5",
+      "category": "output",
+      "round": 3,
+      "passed": false,
+      "firstRound": false,
+      "latencyMs": 1309,
+      "error": "未形成可预演规则: clarification_required"
+    }
+  ]
+}

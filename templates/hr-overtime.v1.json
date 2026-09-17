@@ -1,0 +1,19 @@
+{
+  "id": "hr-overtime",
+  "version": 1,
+  "format": "xls",
+  "sheets": [{
+    "sheetId": "hr-overtime-import",
+    "name": "Sheet1",
+    "headerRow": 1,
+    "maxDataRows": 65535,
+    "columns": [
+      { "columnId": "employee_id", "header": "工号", "dataType": "text", "required": true },
+      { "columnId": "employee_name", "header": "姓名", "dataType": "text", "required": true },
+      { "columnId": "department", "header": "部门", "dataType": "text", "required": true },
+      { "columnId": "position", "header": "职位", "dataType": "text", "required": true },
+      { "columnId": "start_date", "header": "起始日期", "dataType": "text", "required": true },
+      { "columnId": "overtime_hours", "header": "申请加班", "dataType": "text", "required": true }
+    ]
+  }]
+}

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ctd-abpa/types": ["packages/types/src/index.ts"],
+      "@ctd-abpa/core": ["packages/core/src/index.ts"],
+      "@ctd-abpa/excel": ["packages/excel/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "outputs", "data"]
+}

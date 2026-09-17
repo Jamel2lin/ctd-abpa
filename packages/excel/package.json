@@ -1,0 +1,13 @@
+{
+  "name": "@ctd-abpa/excel",
+  "version": "0.2.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": {
+    "@ctd-abpa/core": "workspace:*",
+    "@ctd-abpa/types": "workspace:*",
+    "jszip": "^3.10.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

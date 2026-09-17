@@ -1,0 +1,9 @@
+{
+  "name": "@ctd-abpa/web",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@vitejs/plugin-react": "^5.0.2", "vite": "^7.1.3", "typescript": "^5.9.2", "react": "^19.1.1", "react-dom": "^19.1.1", "@types/react": "^19.1.12", "@types/react-dom": "^19.1.9" },
+  "devDependencies": {}
+}
