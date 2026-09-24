@@ -11,6 +11,7 @@ export function invalidateConfirmation(task: TaskRecord): void {
   delete task.confirmation;
   delete task.previewHash;
   delete task.mappingSnapshot;
+  delete task.staleBalanceCheck;
 }
 
 export function assertConfirmationCurrent(task: TaskRecord): void {

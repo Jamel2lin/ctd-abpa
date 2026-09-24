@@ -407,20 +407,50 @@ app.post("/api/tasks/:id/mapping-suggestions", async (req) => {
 
 app.post("/api/tasks/:id/preview", async (req) => {
   const task = await store.get((req.params as any).id); if (!task.plan) throw new Error("任务尚无计划"); await verifyTaskInputs(task); task.progress = { phase: "previewing", completed: 0, total: 1, message: "本地预览计算" }; await store.save(task);
-    task.mappingSnapshot = sourceAliases(task);
-    const previewPlan = validatePlan({ ...task.plan, allowStaleBalance: true }), result = await executePlan(previewPlan, await sourcePatches(task), task.mappingSnapshot); task.previewHash = planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot }); task.workflowStage = "confirm"; await store.save(task);
-  task.progress = { phase: "idle", completed: 1, total: 1, message: "预览完成" }; await store.save(task);
-  return { headers: result.headers, rows: result.rows.slice(0, 20), exceptions: result.exceptions.slice(0, 20), summary: result.summary, stages: result.stages, reconciliation: { inputRows: result.sourceCount, outputRows: result.rows.length, isolatedRows: result.exceptions.filter((error) => error.severity === "error").length }, requiresStaleBalanceConfirmation: task.plan.operation === "annual_leave_settlement" && result.summary.balanceAsOfNumeric !== undefined };
+  task.mappingSnapshot = sourceAliases(task);
+  const previewPlan = validatePlan({ ...task.plan, allowStaleBalance: true }), result = await executePlan(previewPlan, await sourcePatches(task), task.mappingSnapshot);
+  task.previewHash = planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot });
+  const isStale = Boolean(result.isStaleBalance);
+  const requiresStaleBalanceConfirmation = task.plan.operation === "annual_leave_settlement" && isStale;
+  task.staleBalanceCheck = task.plan.operation === "annual_leave_settlement" ? {
+    isStale,
+    balanceAsOf: result.balanceAsOf,
+    latestLeaveDate: result.latestLeaveDate,
+    reason: result.staleBalanceReason,
+  } : undefined;
+  task.workflowStage = "confirm";
+  await store.save(task);
+  task.progress = { phase: "idle", completed: 1, total: 1, message: "预览完成" };
+  await store.save(task);
+  return {
+    headers: result.headers,
+    rows: result.rows.slice(0, 20),
+    exceptions: result.exceptions.slice(0, 20),
+    summary: result.summary,
+    stages: result.stages,
+    reconciliation: { inputRows: result.sourceCount, outputRows: result.rows.length, isolatedRows: result.exceptions.filter((error) => error.severity === "error").length },
+    requiresStaleBalanceConfirmation,
+    balanceAsOf: result.balanceAsOf,
+    latestLeaveDate: result.latestLeaveDate,
+    staleBalanceReason: result.staleBalanceReason,
+  };
 });
 
-app.post("/api/tasks/:id/confirm", async (req) => {
+app.post("/api/tasks/:id/confirm", async (req, reply) => {
   const task = await store.get((req.params as any).id), body = req.body as any;
   if (!task.plan) throw new Error("任务尚无计划");
   await verifyTaskInputs(task);
   if (!task.previewHash || task.previewHash !== planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot })) throw new Error("请先完成与当前输入和补丁一致的完整预演");
+  if (task.plan.operation === "annual_leave_settlement" && task.staleBalanceCheck?.isStale && !body.allowStaleBalance) {
+    return reply.code(400).send({ error: `${task.staleBalanceCheck.reason ?? "余额时点可能过期"}。必须由 HR 显式确认使用该余额后方可继续，或请重新上传最新年假余额表。` });
+  }
   task.plan = validatePlan({ ...task.plan, allowStaleBalance: Boolean(body.allowStaleBalance), confirmedBy: String(body.confirmedBy ?? "Web用户") });
-  task.planRevision = (task.planRevision ?? 0) + 1; task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot }), confirmedBy: task.plan.confirmedBy ?? "Web用户", confirmedAt: new Date().toISOString() }; task.workflowStage = "execute";
-  task.status = "ready"; await store.save(task); return task;
+  task.planRevision = (task.planRevision ?? 0) + 1;
+  task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot }), confirmedBy: task.plan.confirmedBy ?? "Web用户", confirmedAt: new Date().toISOString() };
+  task.workflowStage = "execute";
+  task.status = "ready";
+  await store.save(task);
+  return task;
 });
 
 app.post("/api/tasks/:id/execute", async (req, reply) => {

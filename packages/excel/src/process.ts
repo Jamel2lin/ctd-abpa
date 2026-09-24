@@ -31,6 +31,10 @@ export interface BalanceAuditRow { employeeId: string; name: string; department:
 export interface ProcessResult {
   sheetName: string; headers: string[]; rows: OutputRow[]; exceptions: ExceptionRecord[];
   balanceAudit: BalanceAuditRow[]; summary: Record<string, number>; sourceCount: number; stages?: StageReconciliationV2[];
+  balanceAsOf?: string;
+  latestLeaveDate?: string;
+  isStaleBalance?: boolean;
+  staleBalanceReason?: string;
 }
 
 function value(row: CellValue[], map: Record<string, number>, field: string): CellValue { return row[map[field]] ?? null; }
@@ -140,9 +144,19 @@ export async function processLeave(path: string, filters: FilterSpec[] = [], pat
 }
 
 function detectBalanceAsOf(sheetName: string, firstHeaderCell: string): string {
+  const exact = [firstHeaderCell, sheetName].map((label) => {
+    const match = /(20\d{2})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?/.exec(label);
+    if (!match) return undefined;
+    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() + 1 !== month || date.getUTCDate() !== day) throw new Error(`年假余额日期无效: ${match[0]}`);
+    return `${match[1]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }).find(Boolean);
+  if (exact) return exact;
   const year = /(20\d{2})年/.exec(firstHeaderCell)?.[1];
   const month = /(\d{1,2})月/.exec(firstHeaderCell)?.[1] ?? /(\d{1,2})月/.exec(sheetName)?.[1];
   if (!year || !month) throw new Error("无法自动识别年假余额月份");
+  if (Number(month) < 1 || Number(month) > 12) throw new Error(`年假余额月份无效: ${month}`);
   return `${year}-${String(Number(month)).padStart(2, "0")}`;
 }
 
@@ -185,8 +199,14 @@ export async function processAnnualSettlement(leavePath: string, balancePath: st
   const filtered = filterRowsV3({ id: "annual-settlement", rows: source.rows.map((row) => ({ sourceRow: row.sourceRow, sourceFile: basename(leavePath), sourceSheet: source.tabName, values: { employeeId: row.employeeId, name: row.name, department: row.department, leaveType: row.leaveType, startDate: row.start.slice(0, 10), minutes: row.minutes, documentNo: row.documentNo } })), columns: { employeeId: "text", name: "text", department: "text", leaveType: "text", startDate: "date", minutes: "integer", documentNo: "text" }, filters });
   const selected = source.rows.filter((row) => filtered.sourceRows.has(row.sourceRow));
   const selectedForSettlement = selected.filter((row) => rule.enabledForLeaveTypes.includes(row.leaveType));
-  const latestLeaveMonth = selectedForSettlement.map((r) => r.start.slice(0, 7)).sort().at(-1) ?? balanceAsOf;
-  if (balanceAsOf < latestLeaveMonth && !options.allowStaleBalance) throw new Error(`年假余额时点 ${balanceAsOf} 早于参与结算的请假月份 ${latestLeaveMonth}，必须确认使用旧余额`);
+  const latestLeaveDate = selectedForSettlement.map((r) => r.start.slice(0, 10)).sort().at(-1);
+  const monthOnly = balanceAsOf.length === 7;
+  const sameMonthUnknown = monthOnly && latestLeaveDate?.slice(0, 7) === balanceAsOf;
+  const isStaleBalance = latestLeaveDate !== undefined && (monthOnly ? balanceAsOf <= latestLeaveDate.slice(0, 7) : balanceAsOf < latestLeaveDate);
+  const staleBalanceReason = !isStaleBalance ? undefined : sameMonthUnknown
+    ? `年假余额仅标注 ${balanceAsOf}，无法证明其截至日不早于参与结算的请假日期 ${latestLeaveDate}`
+    : `年假余额时点 ${balanceAsOf} 早于参与结算的请假日期 ${latestLeaveDate}`;
+  if (isStaleBalance && !options.allowStaleBalance) throw new Error(`${staleBalanceReason}，${sameMonthUnknown ? "必须显式确认使用该余额" : "必须确认使用旧余额"}`);
 
   const byId = new Map<string, Array<{ employeeId: string; name: string; department: string; openingMinutes: number }>>();
   const exceptions = [...source.exceptions];
@@ -234,7 +254,7 @@ export async function processAnnualSettlement(leavePath: string, balancePath: st
   balanceAudit.sort((a, b) => a.employeeId.localeCompare(b.employeeId));
   const annualMinutes = rows.filter((r) => r.cells[3] === rule.annualLeaveType).reduce((s, r) => s + (r.minutes ?? 0), 0), personalMinutes = rows.filter((r) => r.cells[3] === rule.fallbackLeaveType).reduce((s, r) => s + (r.minutes ?? 0), 0);
   const isolatedSelected = selected.filter((r) => !allocations.has(r.sourceRow));
-  return { sheetName: "导入HR 格式", headers: LEAVE_HEADERS, rows, exceptions, balanceAudit, sourceCount: source.sourceCount, stages: [...filtered.stages, ...v3.stages], summary: { inputRecords: source.sourceCount, inputRows: source.sourceCount, validRecords: source.rows.length, validRows: source.rows.length, filteredOutRows: source.rows.length - selected.length, filteredRows: source.rows.length - selected.length, calculationRows: allocations.size, outputRecords: rows.length, outputRows: rows.length, matchedSourceRows: allocations.size, isolatedRows: isolatedSelected.length + source.exceptions.length, annualMinutes, personalMinutes, isolatedMinutes: isolatedSelected.reduce((s, r) => s + r.minutes, 0), balanceAsOfNumeric: Number(balanceAsOf.replace("-", "")), minutesPerDay: rule.minutesPerDay } };
+  return { sheetName: "导入HR 格式", headers: LEAVE_HEADERS, rows, exceptions, balanceAudit, sourceCount: source.sourceCount, stages: [...filtered.stages, ...v3.stages], balanceAsOf, latestLeaveDate, isStaleBalance, staleBalanceReason, summary: { inputRecords: source.sourceCount, inputRows: source.sourceCount, validRecords: source.rows.length, validRows: source.rows.length, filteredOutRows: source.rows.length - selected.length, filteredRows: source.rows.length - selected.length, calculationRows: allocations.size, outputRecords: rows.length, outputRows: rows.length, matchedSourceRows: allocations.size, isolatedRows: isolatedSelected.length + source.exceptions.length, annualMinutes, personalMinutes, isolatedMinutes: isolatedSelected.reduce((s, r) => s + r.minutes, 0), balanceAsOfNumeric: Number(balanceAsOf.replace(/-/g, "")), isStaleBalance: isStaleBalance ? 1 : 0, minutesPerDay: rule.minutesPerDay } };
 }
 
 function XLSXFirstCell(workbook: Awaited<ReturnType<typeof readWorkbook>>, sheet: string): string {

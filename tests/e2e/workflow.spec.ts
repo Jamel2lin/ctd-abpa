@@ -1,6 +1,31 @@
 import { expect, test } from "@playwright/test";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
+test("同月余额只有月份时，网页与 API 均要求显式确认", async ({ page }) => {
+  const directory = await mkdtemp(join(tmpdir(), "ctd-month-e2e-"));
+  const leave = join(directory, "leave.csv"), balance = join(directory, "balance.csv");
+  try {
+    await writeFile(leave, "工号,申请人,部门,请假类型,起始日期,起始时间,结束日期,结束时间,小时,天,单据编号\n001,林一,A,事假,2026-04-02,08:00,2026-04-02,17:00,0,1,D001\n");
+    await writeFile(balance, "2026年4月年假余额\n工号,姓名,部门,剩余年假\n001,林一,A,10\n");
+    const created = page.waitForResponse(response => response.url().endsWith("/api/tasks") && response.request().method() === "POST");
+    await page.goto("/");
+    const taskId = (await (await created).json()).id;
+    await page.locator('input[type="file"]').setInputFiles([leave, balance]);
+    await page.getByRole("button", { name: "上传并分析" }).click();
+    await expect(page.getByText("结构分析完成", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "生成业务计划" }).click();
+    await page.getByRole("button", { name: "完整预演" }).click();
+    await expect(page.getByText(/仅标注 2026-04，无法证明其截至日不早于/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "确认当前计划" })).toBeDisabled();
+    const rejected = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/confirm`, { data: { allowStaleBalance: false } });
+    expect(rejected.status()).toBe(400);
+    await page.locator("#stale-balance-check").check();
+    await page.getByRole("button", { name: "确认当前计划" }).click();
+    await expect(page.locator(".status strong")).toHaveText("ready");
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 test("上传、分析、确认、执行和下载", async ({ page }) => {
   const created = page.waitForResponse(response => response.url().endsWith("/api/tasks") && response.request().method() === "POST");
@@ -23,6 +48,12 @@ test("上传、分析、确认、执行和下载", async ({ page }) => {
   await page.request.put(`http://127.0.0.1:3210/api/tasks/${taskId}/plan`, { data: originalPlan });
   const unconfirmed = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/execute`); expect(unconfirmed.ok()).toBe(false);
   await page.getByRole("button", { name: "完整预演" }).click();
+  await expect(page.getByText("余额时点可能过期")).toBeVisible();
+  await expect(page.getByRole("button", { name: "确认当前计划" })).toBeDisabled();
+  const rejected = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/confirm`, { data: { allowStaleBalance: false } });
+  expect(rejected.status()).toBe(400);
+  await page.locator("#stale-balance-check").check();
+  await expect(page.getByRole("button", { name: "确认当前计划" })).toBeEnabled();
   await page.getByRole("button", { name: "确认当前计划" }).click();
   await expect(page.locator(".status strong")).toHaveText("ready");
   await page.getByRole("button", { name: "执行并生成文件" }).click();
@@ -36,6 +67,8 @@ test("上传、分析、确认、执行和下载", async ({ page }) => {
   const excluded = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/patches`, { data: { exceptionId: "manual", action: "exclude", artifactId: leave.id, sheetId: sheet.id, sourceRow: 4, createdBy: "E2E" } });
   expect(excluded.ok()).toBe(true);
   await page.getByRole("button", { name: "完整预演" }).click();
+  await expect(page.getByRole("button", { name: "确认当前计划" })).toBeDisabled();
+  await page.locator("#stale-balance-check").check();
   await page.getByRole("button", { name: "确认当前计划" }).click();
   await expect(page.locator(".status strong")).toHaveText("ready");
   const rerun = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/execute`); expect(rerun.ok(), await rerun.text()).toBe(true);
@@ -47,6 +80,8 @@ test("上传、分析、确认、执行和下载", async ({ page }) => {
   const patch = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/patches`, { data: { exceptionId: "manual-correction", action: "correct", artifactId: leave.id, sheetId: sheet.id, sourceRow: 2, columnId: daysColumn.id, value: "0.5", createdBy: "E2E" } });
   expect(patch.ok()).toBe(true);
   await page.getByRole("button", { name: "完整预演" }).click();
+  await expect(page.getByRole("button", { name: "确认当前计划" })).toBeDisabled();
+  await page.locator("#stale-balance-check").check();
   await page.getByRole("button", { name: "确认当前计划" }).click();
   await expect(page.locator(".status strong")).toHaveText("ready");
   const corrected = await page.request.post(`http://127.0.0.1:3210/api/tasks/${taskId}/execute`, { headers: { "Idempotency-Key": "e2e-corrected" } }); expect(corrected.ok()).toBe(true); expect((await corrected.json()).runs).toHaveLength(3);

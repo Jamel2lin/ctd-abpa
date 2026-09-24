@@ -16,7 +16,7 @@ describe("配置驱动年假结算", () => {
         "002,林二,B,事假,2026-05-01,08:00,2026-05-01,17:00,0,1,D004",
       ].join("\n"));
       await writeFile(balance, [
-        "2026年4月年假余额",
+        "2026年4月3日年假余额",
         "工号,姓名,部门,剩余年假",
         "001,林一,A,1.5",
       ].join("\n"));
@@ -56,7 +56,7 @@ describe("配置驱动年假结算", () => {
         "001,林一,A,事假,2026-04-05,08:00,2026-04-05,17:00,1,0,DUP",
         "001,林一,A,事假,2026-04-06,08:00,2026-04-06,17:00,1,0,DUP",
       ].join("\n"));
-      await writeFile(balance, "2026年4月年假余额\n工号,姓名,部门,剩余年假\n001,林一,A,10\n");
+      await writeFile(balance, "2026年4月2日年假余额\n工号,姓名,部门,剩余年假\n001,林一,A,10\n");
       const result = await processAnnualSettlement(leave, balance, false);
       expect(result.rows).toHaveLength(1); expect(result.rows[0].documentNo).toBe("OK");
       expect(result.exceptions.filter((error) => error.code === "ROW_INVALID")).toHaveLength(2);

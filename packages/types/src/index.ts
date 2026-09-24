@@ -394,6 +394,7 @@ export interface TaskRecord {
   archivedPatches?: NonNullable<TaskRecord["patches"]>;
   runs?: Array<{ version: number; status: TaskStatus; outputDir: string; startedAt: string; completedAt?: string; planRevision: number; patchIds: string[]; bindingHash?: string; idempotencyKey?: string; artifacts?: string[]; snapshot?: { plan: AnyProcessPlan; inputs: Array<{ artifactId: string; sha256: string }>; rules?: RuleSetVersion; template?: TargetTemplateVersion; patches: NonNullable<TaskRecord["patches"]>; mappingSnapshot?: Record<string, Record<string, string[]>> } }>;
   currentOutputDir?: string;
+  staleBalanceCheck?: { isStale: boolean; balanceAsOf?: string; latestLeaveDate?: string; reason?: string };
   progress?: { phase: "idle" | "queued" | "analyzing" | "planning" | "previewing" | "executing" | "writing" | "completed" | "failed" | "cancelled"; completed: number; total: number; message: string };
 }
 

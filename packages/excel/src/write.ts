@@ -190,7 +190,7 @@ export async function writeTemplatedWorkbook(args: { data: DataSetV2; template: 
   return { outputRows: body.length, exceptions: prepared.exceptions };
 }
 
-function writeXlsxWorkbook(sheets: Array<{ name: string; rows: Array<Array<string | number>>; widths: number[] }>, path: string): Promise<void> {
+export function writeXlsxWorkbook(sheets: Array<{ name: string; rows: Array<Array<string | number>>; widths: number[] }>, path: string): Promise<void> {
   const workbook = XLSX.utils.book_new();
   for (const item of sheets) {
     const sheet = XLSX.utils.aoa_to_sheet(item.rows);
@@ -229,7 +229,7 @@ export async function writeDeliverables(args: { taskId: string; outputDir: strin
     reconciliation: { inputRows: result.sourceCount, outputRows: result.rows.length, errorRecords: result.exceptions.filter((e) => e.severity === "error").length }, stages: result.stages,
     calculationSummary: result.summary,
     exceptions: { total: result.exceptions.length, warnings: result.exceptions.filter((e) => e.severity === "warning").length, errors: result.exceptions.filter((e) => e.severity === "error").length, resolved: result.exceptions.filter((e) => e.resolution).length },
-    confirmations: plan.allowStaleBalance ? [{ type: "stale_balance", confirmedBy: args.confirmedBy ?? plan.confirmedBy ?? "CLI", confirmedAt: new Date().toISOString(), details: { balanceAsOf: result.summary.balanceAsOfNumeric } }] : [],
+    confirmations: plan.allowStaleBalance ? [{ type: "stale_balance", confirmedBy: args.confirmedBy ?? plan.confirmedBy ?? "CLI", confirmedAt: new Date().toISOString(), details: { balanceAsOf: result.summary.balanceAsOfNumeric, ...(result.balanceAsOf ? { balanceAsOfText: result.balanceAsOf } : {}), ...(result.latestLeaveDate ? { latestLeaveDate: result.latestLeaveDate } : {}) } }] : [],
   };
   const manifestPath = join(outputDir, "审计清单.json");
   manifest.outputs = await Promise.all(files.map(async (p) => ({ fileName: basename(p), sha256: await sha256File(p), bytes: (await stat(p)).size })));
