@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { combineLocalDateTime, compareLocalDateTime, decimalHoursToMinutes, decimalMultiplyToInteger, employeeId, executePlanV2, matchFields, minutesToHoursText, parseLocalDate, requireFields, safeSpreadsheetText, type DataSetV2, type StageReconciliationV2 } from "@ctd-abpa/core";
 import { ProcessPlanV3Schema, SettlementRuleSchema, type ExceptionBusinessLevel, type ExceptionDisposition, type ExceptionRecord, type FilterSpec, type NormalizedRow, type ProcessPlan, type ProcessStepV2, type RuleSetVersion, type SettlementRule, type TargetTemplateVersion } from "@ctd-abpa/types";
-import { readTabularSheet, readWorkbook, type CellValue } from "./workbook.js";
+import { readTabularSheet, readWorkbook, type CellValue, type ReadSheetOptions } from "./workbook.js";
 
 export interface SourcePatch { sourcePath: string; sourceSheet: string; sourceRow: number; sourceIndex?: number; action: "correct" | "exclude"; value?: CellValue; }
 function patchedTab<T extends ReturnType<typeof readTabularSheet>>(tab: T, path: string, patches: SourcePatch[]): T {
@@ -71,8 +71,8 @@ function filterRowsV3(args: { id: string; rows: Array<{ sourceRow: number; sourc
   return { rows: result.data.rows, sourceRows: new Set(result.data.rows.map((row) => Number(row.values.source_row))), stages: result.stages };
 }
 
-export async function processOvertime(path: string, filters: FilterSpec[] = [], patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}): Promise<ProcessResult> {
-  const tab = patchedTab(readTabularSheet(await readWorkbook(path)), path, patches);
+export async function processOvertime(path: string, filters: FilterSpec[] = [], patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}, selection?: ReadSheetOptions): Promise<ProcessResult> {
+  const tab = patchedTab(readTabularSheet(await readWorkbook(path), selection), path, patches);
   const map = matchFields(tab.headers, aliases); requireFields(map, ["employeeId", "name", "department", "position", "startDate", "overtimeHours"]);
   const exceptions: ExceptionRecord[] = [], normalized: Array<NormalizedRow<Record<string, string | number>> & { minutes: number }> = [];
   const names = new Map<string, Set<string>>();
@@ -103,8 +103,8 @@ export async function processOvertime(path: string, filters: FilterSpec[] = [], 
 }
 
 interface LeaveRow { employeeId: string; name: string; department: string; leaveType: string; start: string; end: string; documentNo: string; minutes: number; sourceRow: number; raw: Record<string, unknown>; }
-async function readLeaves(path: string, minutesPerDay = 480, patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}): Promise<{ tabName: string; rows: LeaveRow[]; exceptions: ExceptionRecord[]; sourceCount: number }> {
-  const tab = patchedTab(readTabularSheet(await readWorkbook(path)), path, patches);
+async function readLeaves(path: string, minutesPerDay = 480, patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}, selection?: ReadSheetOptions): Promise<{ tabName: string; rows: LeaveRow[]; exceptions: ExceptionRecord[]; sourceCount: number }> {
+  const tab = patchedTab(readTabularSheet(await readWorkbook(path), selection), path, patches);
   const map = matchFields(tab.headers, aliases); requireFields(map, ["employeeId", "name", "department", "leaveType", "startDate", "startTime", "endDate", "endTime", "hours", "days", "documentNo"]);
   const rows: LeaveRow[] = [], exceptions: ExceptionRecord[] = [];
   tab.rows.forEach((row, i) => {
@@ -134,8 +134,8 @@ function leaveOutput(row: LeaveRow, type: string, minutes = row.minutes): Output
   return { sourceRow: row.sourceRow, documentNo: row.documentNo, employeeId: row.employeeId, minutes, cells: [row.employeeId, row.name, row.department, type, row.start, row.end, minutesToHoursText(minutes), "是"].map(safeSpreadsheetText) };
 }
 
-export async function processLeave(path: string, filters: FilterSpec[] = [], patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}): Promise<ProcessResult> {
-  const source = await readLeaves(path, 480, patches, aliases);
+export async function processLeave(path: string, filters: FilterSpec[] = [], patches: SourcePatch[] = [], aliases: Record<string, string[]> = {}, selection?: ReadSheetOptions): Promise<ProcessResult> {
+  const source = await readLeaves(path, 480, patches, aliases, selection);
   const selected = filterRowsV3({ id: "oa-leave", rows: source.rows.map((row) => ({ sourceRow: row.sourceRow, sourceFile: basename(path), sourceSheet: source.tabName, values: { employeeId: row.employeeId, name: row.name, department: row.department, leaveType: row.leaveType, startDate: row.start.slice(0, 10), minutes: row.minutes, documentNo: row.documentNo, employee_id: row.employeeId, employee_name: row.name, leave_type: row.leaveType, start_at: row.start, end_at: row.end, total_hours: minutesToHoursText(row.minutes), attendance_exempt: "是" } })), columns: { employeeId: "text", name: "text", department: "text", leaveType: "text", startDate: "date", minutes: "integer", documentNo: "text", employee_id: "text", employee_name: "text", leave_type: "text", start_at: "text", end_at: "text", total_hours: "text", attendance_exempt: "text" }, filters, outputColumns: [
     { columnId: "employee_id", header: "工号", dataType: "text", required: true }, { columnId: "employee_name", header: "姓名", dataType: "text", required: true }, { columnId: "department", header: "部门", dataType: "text", required: true }, { columnId: "leave_type", header: "缺勤类别", dataType: "text", required: true }, { columnId: "start_at", header: "起始时间", dataType: "text", required: true }, { columnId: "end_at", header: "终止时间", dataType: "text", required: true }, { columnId: "total_hours", header: "合计小时", dataType: "text", required: true }, { columnId: "attendance_exempt", header: "免打卡", dataType: "text", required: true },
   ] });
@@ -160,7 +160,7 @@ function detectBalanceAsOf(sheetName: string, firstHeaderCell: string): string {
   return `${year}-${String(Number(month)).padStart(2, "0")}`;
 }
 
-export interface AnnualSettlementOptions { allowStaleBalance?: boolean; filters?: FilterSpec[]; settlement?: Partial<SettlementRule>; patches?: SourcePatch[]; aliasesByPath?: Record<string, Record<string, string[]>>; }
+export interface AnnualSettlementOptions { allowStaleBalance?: boolean; filters?: FilterSpec[]; settlement?: Partial<SettlementRule>; patches?: SourcePatch[]; aliasesByPath?: Record<string, Record<string, string[]>>; sheetSelections?: ProcessPlan["sheetSelections"]; }
 
 function allocateSettlementV3(items: Array<{ leave: LeaveRow; openingMinutes: number }>): { allocations: Map<number, { annual: number; personal: number }>; stages: StageReconciliationV2[] } {
   const columns: DataSetV2["columns"] = { employee_id: "text", source_row: "integer", start_at: "datetime", document_no: "text", opening_minutes: "integer", demand_minutes: "integer" };
@@ -192,8 +192,8 @@ function allocateSettlementV3(items: Array<{ leave: LeaveRow; openingMinutes: nu
 export async function processAnnualSettlement(leavePath: string, balancePath: string, allowStaleOrOptions: boolean | AnnualSettlementOptions): Promise<ProcessResult> {
   const options: AnnualSettlementOptions = typeof allowStaleOrOptions === "boolean" ? { allowStaleBalance: allowStaleOrOptions } : allowStaleOrOptions;
   const rule = SettlementRuleSchema.parse(options.settlement ?? {}), filters = options.filters ?? [];
-  const source = await readLeaves(leavePath, rule.minutesPerDay, options.patches, options.aliasesByPath?.[leavePath]), balanceBook = await readWorkbook(balancePath);
-  const balanceTab = patchedTab(readTabularSheet(balanceBook), balancePath, options.patches ?? []);
+  const source = await readLeaves(leavePath, rule.minutesPerDay, options.patches, options.aliasesByPath?.[leavePath], options.sheetSelections?.[leavePath]), balanceBook = await readWorkbook(balancePath);
+  const balanceTab = patchedTab(readTabularSheet(balanceBook, options.sheetSelections?.[balancePath]), balancePath, options.patches ?? []);
   const balanceMap = matchFields(balanceTab.headers, options.aliasesByPath?.[balancePath]); requireFields(balanceMap, ["employeeId", "name", "department", "annualBalance"]);
   const rawFirst = XLSXFirstCell(balanceBook, balanceTab.name), balanceAsOf = detectBalanceAsOf(balanceTab.name, rawFirst);
   const filtered = filterRowsV3({ id: "annual-settlement", rows: source.rows.map((row) => ({ sourceRow: row.sourceRow, sourceFile: basename(leavePath), sourceSheet: source.tabName, values: { employeeId: row.employeeId, name: row.name, department: row.department, leaveType: row.leaveType, startDate: row.start.slice(0, 10), minutes: row.minutes, documentNo: row.documentNo } })), columns: { employeeId: "text", name: "text", department: "text", leaveType: "text", startDate: "date", minutes: "integer", documentNo: "text" }, filters });
@@ -264,7 +264,7 @@ function XLSXFirstCell(workbook: Awaited<ReturnType<typeof readWorkbook>>, sheet
 }
 
 export async function executePlan(plan: ProcessPlan, patches: SourcePatch[] = [], aliasesByPath: Record<string, Record<string, string[]>> = {}): Promise<ProcessResult> {
-  if (plan.operation === "erp_overtime_to_hr") { const path = plan.sources.overtime ?? Object.values(plan.sources)[0]; return processOvertime(path, plan.filters, patches, aliasesByPath[path]); }
-  if (plan.operation === "oa_leave_to_hr") { const path = plan.sources.leave ?? Object.values(plan.sources)[0]; return processLeave(path, plan.filters, patches, aliasesByPath[path]); }
-  return processAnnualSettlement(plan.sources.leave, plan.sources.balance, { allowStaleBalance: plan.allowStaleBalance, filters: plan.filters, settlement: plan.settlement, patches, aliasesByPath });
+  if (plan.operation === "erp_overtime_to_hr") { const path = plan.sources.overtime ?? Object.values(plan.sources)[0]; return processOvertime(path, plan.filters, patches, aliasesByPath[path], plan.sheetSelections?.[path]); }
+  if (plan.operation === "oa_leave_to_hr") { const path = plan.sources.leave ?? Object.values(plan.sources)[0]; return processLeave(path, plan.filters, patches, aliasesByPath[path], plan.sheetSelections?.[path]); }
+  return processAnnualSettlement(plan.sources.leave, plan.sources.balance, { allowStaleBalance: plan.allowStaleBalance, filters: plan.filters, settlement: plan.settlement, patches, aliasesByPath, sheetSelections: plan.sheetSelections });
 }

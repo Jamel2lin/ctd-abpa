@@ -1,0 +1,204 @@
+{
+  "recordedAt": "2026-10-02T21:10:52.374708+00:00",
+  "timezone": "Asia/Shanghai",
+  "node": "v24.21.0",
+  "pnpm": "11.19.0",
+  "platform": "darwin-arm64",
+  "baseCommit": "4ca45c3f22eb3ae860812d2d6f3627b66cd09953",
+  "workingTree": "uncommitted; existing user changes preserved",
+  "commands": [
+    {
+      "command": "pnpm lint",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm test",
+      "status": "passed",
+      "files": 19,
+      "tests": 85,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm build",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm test:e2e",
+      "status": "passed",
+      "tests": 13,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm verify:artifacts",
+      "status": "passed",
+      "groups": 3
+    },
+    {
+      "command": "pnpm benchmark:capacity",
+      "status": "passed",
+      "evidence": "容量基准-2026-10-03.json",
+      "scope": "合成 CSV，非真实并发容量"
+    }
+  ],
+  "logs": [
+    {
+      "check": "unit",
+      "sha256": "12066997bc7f90e21d2a865bc15c6ca24c0bc7dfb4eb7b3a975ebfe75790174a",
+      "recordedAt": "2026-10-02T21:05:59.520171+00:00"
+    },
+    {
+      "check": "e2e",
+      "sha256": "3f1ca96ac0233e5d2d3da1c4d481068e0f0a5d7b8fe66fd34b4827e33d3f1b8b",
+      "recordedAt": "2026-10-02T21:09:10.825596+00:00"
+    },
+    {
+      "check": "lint",
+      "sha256": "050c69da23536758722729aeda55a8d0fb9d557495ef6d33d70873a3b64a71c1",
+      "recordedAt": "2026-10-02T21:09:00.882504+00:00"
+    },
+    {
+      "check": "types",
+      "sha256": "fa9f2a48e00d460b5b1ee9ee757be79ebf74b158a456d05b4b52b5f61f23e17e",
+      "recordedAt": "2026-10-02T21:06:02.868503+00:00"
+    },
+    {
+      "check": "build",
+      "sha256": "567d9c25aed0970524119f0cd45b1d95a9e4774eaa729aecef95c0c3646cbacc",
+      "recordedAt": "2026-10-02T21:06:02.969769+00:00"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": ".env.example",
+      "sha256": "f06c0e0ae46a1a662af48baaa72b503773b60940fa53e62abd5c7d9bbed254d8"
+    },
+    {
+      "path": "eslint.config.js",
+      "sha256": "85df1ff939df7d40fdcb4a38058763ad369e387f40a2e48b80a86e7937f54460"
+    },
+    {
+      "path": "package.json",
+      "sha256": "04b33a978fe4dc3c256c132e4944ca63beef2d9240c733ad3d8dfaac8d3b8a7b"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "sha256": "c6e17eb27a95b6974480b4f133e8df906455e9153c6581b532046018563ec8b2"
+    },
+    {
+      "path": "playwright.config.ts",
+      "sha256": "e402440d7b1871a1caad554a88f43844f1e7e987eb807829f428dcff9992229b"
+    },
+    {
+      "path": "apps/api/src/access.ts",
+      "sha256": "a03d9d9d4aa571dbc8aa0754fd6546dd0070d6a3257cb6dcc8f997b2639aeeab"
+    },
+    {
+      "path": "apps/api/src/server.ts",
+      "sha256": "5a6b461b507ee591b287cb7632e71f5f6a588b9a1415cbd11015eaf4b4fdb1da"
+    },
+    {
+      "path": "apps/web/src/RuleBuilder.tsx",
+      "sha256": "f2b1c4eb7d344d9187146cb69e5cc9e4f9297185a22f0bb4f8e4a3c6c7df2fe0"
+    },
+    {
+      "path": "apps/web/src/main.tsx",
+      "sha256": "45440c4edc7fc02bcc1c4f39c9705b52b5468fe5ea6f3780928b9139428d913b"
+    },
+    {
+      "path": "apps/web/src/styles.css",
+      "sha256": "7d45244c5b3da74a935a6eaf666c6481deb8c2109a57ac0da9e9ef128ca46519"
+    },
+    {
+      "path": "packages/types/src/index.ts",
+      "sha256": "68b0ab89e397f07ebf4fe4e525c633951623aa4ecd41b278690dfe713f45228f"
+    },
+    {
+      "path": "packages/core/src/rules.ts",
+      "sha256": "5d424f670c823cc8d65ee17c39274b5cb9670b48657c0044a12615ad3f694649"
+    },
+    {
+      "path": "packages/excel/src/workbook.ts",
+      "sha256": "2b6accfde6c92b0d11383149d19f530f4d5fd769ebc3da3998a1315540a02342"
+    },
+    {
+      "path": "packages/excel/src/v2.ts",
+      "sha256": "bd8d3f7ebb76aee48d742659dfc5a47a4b9031c11d06af911b9faebc244acdff"
+    },
+    {
+      "path": "packages/excel/src/process.ts",
+      "sha256": "7940333ea9e1f58bae97ce2e6baa898370178b29e281630b3735a13036dc609b"
+    },
+    {
+      "path": "packages/excel/src/write.ts",
+      "sha256": "ad8ec8b91c02ee0d94b83f27b952fe855a0cefd61caa9810514e8298b348262c"
+    },
+    {
+      "path": "scripts/benchmark-capacity.ts",
+      "sha256": "14de92843e50fdbf371fad192c3411fbedf7ec266b7c18539cf6e304e3c21710"
+    },
+    {
+      "path": "tests/access.test.ts",
+      "sha256": "97b41ec5fd5c2eb1676970b2a9cb98ffda075e6259c52c8a03932617ce1248f0"
+    },
+    {
+      "path": "tests/generic-patches.test.ts",
+      "sha256": "b604ba6dde7256966f8f8807e3714d4d18f18d2b2b9a8e036671ab7fe7029031"
+    },
+    {
+      "path": "tests/model-boundary.test.ts",
+      "sha256": "4e698e3ec62915e3cc7ef7f30b3f1aefb76cedf55ae171c3016f39f3e754f102"
+    },
+    {
+      "path": "tests/e2e/access-api.spec.ts",
+      "sha256": "b54159ba2b2fe752efd0502c00fd927f06bf6809084e8ae29b5db270da14b757"
+    },
+    {
+      "path": "tests/e2e/cleanup.ts",
+      "sha256": "58b29ac417b2f617ae734262c36a80e53f5909f1726a518f1660b77cc763c775"
+    },
+    {
+      "path": "tests/e2e/generic-v2.spec.ts",
+      "sha256": "d243c075735003a36ab3065ce935a682bb1086dcb988853bbe4bbed785979f93"
+    },
+    {
+      "path": "tests/e2e/header-selection.spec.ts",
+      "sha256": "dd95e16c5311ec0911344f725cd4337f968b4e33e57e81687626837113cc2e1c"
+    },
+    {
+      "path": "tests/e2e/rule-forms.spec.ts",
+      "sha256": "e2f8f55cba33c4f8942ee5b44a70052ecbe1c2f12cb70591725705a075375b72"
+    },
+    {
+      "path": "tests/e2e/workflow.spec.ts",
+      "sha256": "d1e5232bff53bf174186ff8c0e2b1ecfa1dfb98d0f6b4e3f1853d5526867abdb"
+    }
+  ],
+  "existingDemoArtifacts": [
+    {
+      "path": "outputs/demo/加班转HR/HR导入.xls",
+      "sha256": "dc3ccb326a539d372ef54531a55cff6fa2142630ee55926730f59514dd75245a"
+    },
+    {
+      "path": "outputs/demo/年假结算/HR导入.xls",
+      "sha256": "3eae9e3604707b44118e352528e0c1ffc32043cce776e50ff9bec6774ea66da7"
+    },
+    {
+      "path": "outputs/demo/请假转HR/HR导入.xls",
+      "sha256": "c10d2f26236047d3aa2cdf28ad62abe3c97070c812beb4f7fad5d6e64392c0e0"
+    }
+  ],
+  "limitations": {
+    "realHrImport": "not_verified",
+    "independentBusinessGoldenSignoff": "not_verified",
+    "authoritativeTemporalHrMasterIntegration": "not_implemented",
+    "nonDeveloperFormAcceptance": "not_verified",
+    "currentLiveModelCalls": "not_run",
+    "officialDeepSeekDirectAcceptance": "not_verified",
+    "actualLargeXlsxAndMultiUserCapacity": "not_verified"
+  },
+  "report": "../问题整改与剩余问题报告-2026-10-03.md"
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +8,8 @@ import { processAnnualSettlement, writeDeliverables, writeXlsxWorkbook } from "@
 import { invalidateConfirmation } from "@ctd-abpa/core";
 import type { ProcessPlan } from "@ctd-abpa/types";
 
-const data = resolve("data/自动化桥接与处理智能体数据集file");
+const data = resolve(process.env.CTD_TEST_DATA_DIR ?? "data/自动化桥接与处理智能体数据集file");
+const hasRealData = ["OA导出请假单.xlsx", "年假.xls"].every((file) => existsSync(resolve(data, file)));
 
 describe("年假旧余额显式确认与时点判定机制", () => {
   it("仅有月份且请假发生在同月时，无法证明余额截至日，必须显式确认", async () => {
@@ -36,7 +38,7 @@ describe("年假旧余额显式确认与时点判定机制", () => {
     } finally { await rm(tempDir, { recursive: true, force: true }); }
   });
 
-  it("场景 1：余额时点早于请假日期（过期）且未显式确认时，直接拒绝执行并提示准确时点", async () => {
+  it.skipIf(!hasRealData)("场景 1：余额时点早于请假日期（过期）且未显式确认时，直接拒绝执行并提示准确时点", async () => {
     // 年假.xls 为 2026-02，OA导出请假单.xlsx 请假为 2026-04
     await expect(
       processAnnualSettlement(
@@ -47,7 +49,7 @@ describe("年假旧余额显式确认与时点判定机制", () => {
     ).rejects.toThrow(/年假余额时点 2026-02 早于参与结算的请假日期 2026-04-30，必须确认使用旧余额/);
   });
 
-  it("场景 2：余额时点早于请假日期，但 HR 显式确认继续使用时，顺利执行并标记 isStaleBalance", async () => {
+  it.skipIf(!hasRealData)("场景 2：余额时点早于请假日期，但 HR 显式确认继续使用时，顺利执行并标记 isStaleBalance", async () => {
     const result = await processAnnualSettlement(
       resolve(data, "OA导出请假单.xlsx"),
       resolve(data, "年假.xls"),
@@ -93,7 +95,7 @@ describe("年假旧余额显式确认与时点判定机制", () => {
     }
   });
 
-  it("场景 3：余额日期 >= 请假日期（未过期）时，正常自动处理，无需 allowStaleBalance", async () => {
+  it.skipIf(!hasRealData)("场景 3：余额日期 >= 请假日期（未过期）时，正常自动处理，无需 allowStaleBalance", async () => {
     // 创建一个时点为 2026年5月（晚于请假 2026-04）的测试余额表
     const tempDir = await mkdtemp(join(tmpdir(), "ctd-fresh-balance-"));
     const freshBalancePath = join(tempDir, "2026年5月年假.xlsx");

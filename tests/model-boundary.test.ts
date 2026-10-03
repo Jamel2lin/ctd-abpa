@@ -72,4 +72,22 @@ describe("模型业务边界", () => {
     const result = await suggestRulePatchDetailed({ instruction: "临时工不要这样匹配", current: RuleSetVersionSchema.parse({ id: "rule", version: 1, name: "规则", status: "published", aliases: {}, steps: [], scope: { kind: "source", sourceIdentity: "oa:leave" } }), modelProvider: provider });
     expect(calls).toBe(0); expect(result.status).toBe("clarification_required");
   });
+  it("连续两轮改筛选保留历史与前稿，误解为无筛选时必须修复", async () => {
+    const base: any = { version: 3, planId: "dialogue", revision: 1, rules: { id: "dialogue-rule", version: 1 }, inputs: [{ bindingId: "source", artifactId: "artifact-1", sheetId: "sheet-1", headerRows: [1], columns: [{ columnId: "name", sourceIndex: 0, sourceHeader: "姓名" }] }], steps: [], targetTemplate: { id: "template", version: 1 }, outputs: [{ sheetId: "out", datasetId: "source" }], parameters: {} };
+    const contexts: any[] = []; let calls = 0;
+    const provider: ModelProvider = { id: "deepseek", capability: "enabled", async callStructured(request) {
+      contexts.push(request.context); calls++;
+      const person = request.instruction.match(/@PRIVATE_\d+@/)?.[0];
+      const value = calls === 2 ? base : { ...base, revision: calls, steps: [{ stepId: "chosen", input: "source", operator: "filter", predicate: { kind: "compare", operator: "eq", left: { kind: "column", columnId: "name" }, right: { kind: "literal", value: person } } }], outputs: [{ sheetId: "out", datasetId: "chosen" }] };
+      return { status: "success", provider: "deepseek", model: "scripted-dialogue-test", value, usage: {}, attempts: 1 } as never;
+    } };
+    const context = { artifacts: [{ id: "artifact-1", sheets: [{ id: "sheet-1", headerRow: 1, columns: [{ index: 0, header: "姓名", inferredTypes: ["string"] }] }] }], template: { id: "template", version: 1, format: "xlsx" as const, sheets: [{ sheetId: "out", name: "结果", headerRow: 1, columns: [{ columnId: "name", header: "姓名", dataType: "text" as const }] }] }, ruleRef: { id: "dialogue-rule", version: 1 }, privateTerms: ["张三", "李四"] };
+    const first = await suggestPlanV3Detailed({ ...context, instruction: "只保留张三" }, "deepseek", provider);
+    const second = await suggestPlanV3Detailed({ ...context, instruction: "只保留李四", history: ["只保留张三"], previousDraft: first.plan }, "deepseek", provider);
+    expect(second.repairRounds).toBe(1); expect(calls).toBe(3);
+    expect(contexts[1].recentUserInstructions).toHaveLength(1); expect(contexts[1].previousDraft.steps).toHaveLength(1);
+    expect(JSON.stringify(contexts)).not.toMatch(/张三|李四/);
+    const filter: any = second.plan.steps[0]; expect(filter.predicate.right.value).toBe("李四");
+  });
+
 });

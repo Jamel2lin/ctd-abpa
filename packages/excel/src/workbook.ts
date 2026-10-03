@@ -39,16 +39,24 @@ function rowsOf(sheet: XLSX.WorkSheet): CellValue[][] {
   return XLSX.utils.sheet_to_json<CellValue[]>(sheet, { header: 1, raw: true, defval: null, blankrows: true });
 }
 
+export async function previewWorkbookRows(path: string, sheetName: string): Promise<Array<{ sourceRow: number; cells: CellValue[] }>> {
+  const workbook = await readWorkbook(path);
+  if (!workbook.Sheets[sheetName]) throw new Error("工作表不存在");
+  return rowsOf(workbook.Sheets[sheetName]).slice(0, 100).map((cells, index) => ({ sourceRow: index + 1, cells }));
+}
+
 export function detectHeaderRow(rows: CellValue[][]): number {
   let best = -1, score = -1;
-  for (let i = 0; i < Math.min(20, rows.length); i++) {
+  for (let i = 0; i < Math.min(100, rows.length); i++) {
     const values = (rows[i] ?? []).map((v) => String(v ?? "").trim()).filter(Boolean);
     if (!values.length) continue;
     const recognized = Object.values(FIELD_ALIASES).filter((aliases) => values.some((value) => aliases.includes(value))).length;
     const candidate = recognized * 100 + new Set(values).size;
     if (candidate > score) { score = candidate; best = i; }
   }
-  if (best < 0) throw new Error("前 20 行内未找到表头");
+  // 空白前言不能阻断上传，否则用户没有机会通过工作台显式指定表头。
+  if (best < 0) best = rows.findIndex((row) => row.some((value) => value !== null && String(value ?? "").trim() !== ""));
+  if (best < 0) throw new Error("工作表内未找到表头");
   return best;
 }
 
@@ -63,9 +71,8 @@ export function readTabularSheet(workbook: XLSX.WorkBook, requested?: string | R
   });
   if (!name || !workbook.Sheets[name]) throw new Error(`必要工作表缺失: ${requestedSheet ?? "非空工作表"}`);
   const all = rowsOf(workbook.Sheets[name]);
-  const detectedHeader = detectHeaderRow(all);
-  const selectedHeaderRows = options.headerRows?.length ? [...new Set(options.headerRows)].sort((a, b) => a - b) : [detectedHeader + 1];
-  if (selectedHeaderRows.some((row) => row < 1 || row > all.length)) throw new Error("表头行超出工作表范围");
+  const selectedHeaderRows = options.headerRows?.length ? [...new Set(options.headerRows)].sort((a, b) => a - b) : [detectHeaderRow(all) + 1];
+  if (selectedHeaderRows.some((row) => !Number.isInteger(row) || row < 1 || row > all.length)) throw new Error("表头行超出工作表范围");
   const headerRow = selectedHeaderRows.at(-1)! - 1;
   const width = Math.max(...selectedHeaderRows.map((row) => all[row - 1]?.length ?? 0));
   const headers = Array.from({ length: width }, (_, column) => selectedHeaderRows.map((row) => String(all[row - 1]?.[column] ?? "").trim()).filter(Boolean).join("/"));
@@ -89,7 +96,7 @@ function inferKind(headers: string[]): ArtifactKind {
   return "unknown";
 }
 
-export async function analyzeWorkbook(path: string, artifactId?: string): Promise<SourceArtifact> {
+export async function analyzeWorkbook(path: string, artifactId?: string, headerOverrides: Record<string, number[]> = {}): Promise<SourceArtifact> {
   const workbook = await readWorkbook(path);
   const sha256 = await sha256File(path);
   const sheets: SheetAnalysis[] = workbook.SheetNames.map((name, sheetIndex) => {
@@ -98,7 +105,8 @@ export async function analyzeWorkbook(path: string, artifactId?: string): Promis
     if (!all.some((r) => r.some((v) => v !== null && String(v).trim() !== ""))) {
       return { id: sheetId, name, rowCount: 0, columnCount: 0, headerRow: 0, headers: [], duplicateHeaders: [], emptyRows: [], inferredTypes: {}, fingerprint: fingerprint([]), columns: [] };
     }
-    const h = detectHeaderRow(all), headers = (all[h] ?? []).map((v) => String(v ?? "").trim());
+    const tab = readTabularSheet(workbook, { sheet: name, headerRows: headerOverrides[sheetId] });
+    const h = tab.headerRow - 1, headers = tab.headers;
     const duplicates = headers.filter((v, i) => v && headers.indexOf(v) !== i);
     const emptyRows: number[] = [], inferred = new Map<string, Set<string>>();
     headers.forEach((x) => inferred.set(x, new Set()));
@@ -113,7 +121,7 @@ export async function analyzeWorkbook(path: string, artifactId?: string): Promis
     const columns = headers.map((header, index) => ({ id: `${sheetId}:column-${index + 1}`, index, header, inferredTypes: inferredTypes[header] ?? [] }));
     return { id: sheetId, name, rowCount: Math.max(0, all.length - h - 1 - emptyRows.length), columnCount: headers.length, headerRow: h + 1, headers, duplicateHeaders: [...new Set(duplicates)], emptyRows, inferredTypes, fingerprint: fingerprint(headers), columns };
   });
-  const nonEmpty = sheets.find((s) => s.rowCount > 0 || s.headers.length > 0);
+  const nonEmpty = sheets.find((s) => headerOverrides[s.id]) ?? sheets.find((s) => s.rowCount > 0 || s.headers.length > 0);
   return { id: artifactId ?? `artifact-${sha256}`, fileName: path.split("/").pop()!, path, sha256, kind: nonEmpty ? inferKind(nonEmpty.headers) : "unknown", sheets };
 }
 

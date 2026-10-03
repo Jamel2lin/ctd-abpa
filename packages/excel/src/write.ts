@@ -213,7 +213,7 @@ export async function writeBalanceAudit(rows: BalanceAuditRow[], path: string): 
   await writeXlsxWorkbook([{ name: "年假余额对账", rows: [headers, ...body], widths: [14, 12, 18, 12, 16, 14, 16] }], path);
 }
 
-export async function writeDeliverables(args: { taskId: string; outputDir: string; result: ProcessResult; plan: ProcessPlan; confirmedBy?: string }): Promise<ArtifactManifest> {
+export async function writeDeliverables(args: { taskId: string; outputDir: string; result: ProcessResult; plan: ProcessPlan; confirmedBy?: string; approval?: ArtifactManifest["approval"]; patches?: ArtifactManifest["patches"] }): Promise<ArtifactManifest> {
   const { taskId, outputDir, result, plan } = args;
   await mkdir(outputDir, { recursive: true });
   const files: string[] = [];
@@ -225,11 +225,11 @@ export async function writeDeliverables(args: { taskId: string; outputDir: strin
     taskId, status: result.exceptions.some((e) => e.severity === "error") ? "completed_with_exceptions" : "completed",
     createdAt: new Date().toISOString(), completedAt: new Date().toISOString(),
     inputs: await Promise.all(inputPaths.map(async (p) => ({ fileName: basename(p), sha256: await sha256File(p) }))),
-    outputs: [], profileVersions: { builtin: 1 }, plan,
+    approval: args.approval, patches: args.patches, outputs: [], profileVersions: { builtin: 1 }, plan,
     reconciliation: { inputRows: result.sourceCount, outputRows: result.rows.length, errorRecords: result.exceptions.filter((e) => e.severity === "error").length }, stages: result.stages,
     calculationSummary: result.summary,
     exceptions: { total: result.exceptions.length, warnings: result.exceptions.filter((e) => e.severity === "warning").length, errors: result.exceptions.filter((e) => e.severity === "error").length, resolved: result.exceptions.filter((e) => e.resolution).length },
-    confirmations: plan.allowStaleBalance ? [{ type: "stale_balance", confirmedBy: args.confirmedBy ?? plan.confirmedBy ?? "CLI", confirmedAt: new Date().toISOString(), details: { balanceAsOf: result.summary.balanceAsOfNumeric, ...(result.balanceAsOf ? { balanceAsOfText: result.balanceAsOf } : {}), ...(result.latestLeaveDate ? { latestLeaveDate: result.latestLeaveDate } : {}) } }] : [],
+    confirmations: plan.allowStaleBalance && result.isStaleBalance ? [{ type: "stale_balance", confirmedBy: args.confirmedBy ?? plan.confirmedBy ?? "CLI", confirmedAt: args.approval?.confirmedAt ?? new Date().toISOString(), details: { balanceAsOf: result.summary.balanceAsOfNumeric, ...(result.balanceAsOf ? { balanceAsOfText: result.balanceAsOf } : {}), ...(result.latestLeaveDate ? { latestLeaveDate: result.latestLeaveDate } : {}), reason: result.staleBalanceReason, evidence: plan.staleBalanceEvidence } }] : [],
   };
   const manifestPath = join(outputDir, "审计清单.json");
   manifest.outputs = await Promise.all(files.map(async (p) => ({ fileName: basename(p), sha256: await sha256File(p), bytes: (await stat(p)).size })));

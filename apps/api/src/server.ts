@@ -1,4 +1,7 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
+import { performance } from "node:perf_hooks";
+import { pipeline } from "node:stream/promises";
+import { actor, canReadTask, accessSettings, registerAccess } from "./access.js";
 import { loadEnvFile } from "node:process";
 import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve, sep } from "node:path";
@@ -6,7 +9,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 import { FIELD_ALIASES, RuleRevisionConflictError, TaskRevisionConflictError, TaskStore, applyRulePatch, assertConfirmationCurrent, diffRuleRevisions, invalidateConfirmation, parseInstruction, planBindingHash, preflightPlanV2, promptHash, publicModelStatus, restoreRuleRevision, sourceIdentityScope, suggestMappings, suggestPlanDetailed, suggestPlanV2Detailed, suggestRuleDraftV3Detailed, suggestRulePatchDetailed, transitionRuleStatus, validatePlan } from "@ctd-abpa/core";
-import { analyzeWorkbook, batchTemplatedOutputs, bindWorkbookInputsV2, executePlan, executeWorkbookPlanV2, profileArtifactsForModel, sha256File, writeDeliverables, writeExceptions, writeTemplatedWorkbookV3, type SourcePatch } from "@ctd-abpa/excel";
+import { analyzeWorkbook, batchTemplatedOutputs, bindWorkbookInputsV2, executePlan, executeWorkbookPlanV2, previewWorkbookRows, readTabularSheet, readWorkbook, profileArtifactsForModel, sha256File, writeDeliverables, writeExceptions, writeTemplatedWorkbookV3, type SourcePatch } from "@ctd-abpa/excel";
 import { ProcessPlanV2Schema, ProcessPlanV3Schema, RulePatchSchema, RuleSetVersionSchema, SourceIdentitySchema, StableIdSchema, TargetTemplateVersionSchema, type ProcessPlan, type ProcessPlanV2, type ProcessPlanV3, type SourceArtifact, type TaskRecord } from "@ctd-abpa/types";
 
 try { loadEnvFile(); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
@@ -17,6 +20,8 @@ app.setErrorHandler((error, _request, reply) => {
   const failure = error as Error & { statusCode?: number };
   return reply.code(failure.statusCode ?? 500).send({ error: failure.message });
 });
+const store = new TaskStore(resolve(process.env.TASK_STORAGE_DIR ?? ".tasks"));
+const access = accessSettings(); registerAccess(app, store, access);
 app.addHook("preHandler", async (req, reply) => {
   if (!["POST", "PUT", "DELETE"].includes(req.method)) return;
   const path = req.url.split("?")[0];
@@ -25,11 +30,19 @@ app.addHook("preHandler", async (req, reply) => {
   const task = await store.get(match[1]);
   if (task.status === "running") return reply.code(409).send({ error: "任务运行中，输入、计划和映射已锁定" });
 });
-await app.register(cors, { origin: true }); await app.register(multipart, { limits: { fileSize: 100 * 1024 * 1024, files: 5 } });
-const store = new TaskStore(resolve(process.env.TASK_STORAGE_DIR ?? ".tasks"));
+const maxUploadBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 100 * 1024 * 1024);
+if (!Number.isSafeInteger(maxUploadBytes) || maxUploadBytes < 1) throw new Error("MAX_UPLOAD_BYTES 必须为正整数");
+await app.register(cors, { origin: access.origins }); await app.register(multipart, { limits: { fileSize: maxUploadBytes, files: 5 } });
 await store.recoverInterrupted();
 const configRoot = resolve(process.env.CONFIG_STORAGE_DIR ?? ".config");
 let executionQueue: Promise<void> = Promise.resolve();
+let pendingRuns = 0, activeRuns = 0;
+const maxPendingRuns = Number(process.env.MAX_PENDING_RUNS ?? 10);
+if (!Number.isInteger(maxPendingRuns) || maxPendingRuns < 1 || maxPendingRuns > 100) throw new Error("MAX_PENDING_RUNS 必须为 1–100 的整数");
+app.get("/api/metrics", async (req, reply) => {
+  if (actor(req).role !== "admin") return reply.code(403).send({ error: "运行监控需要管理员权限" });
+  return { uptimeSeconds: process.uptime(), memory: process.memoryUsage(), eventLoop: performance.eventLoopUtilization(), execution: { pending: pendingRuns, active: activeRuns, queued: pendingRuns - activeRuns, limit: maxPendingRuns }, upload: { maxFileBytes: maxUploadBytes, maxFiles: 5 } };
+});
 async function waitForExecutionSlot(): Promise<void> {
   const delay = Number(process.env.EXECUTION_QUEUE_DELAY_MS ?? 0);
   if (!Number.isInteger(delay) || delay < 0 || delay > 10_000) throw new Error("执行队列等待时间必须为 0–10000 毫秒");
@@ -82,9 +95,9 @@ async function buildPlan(task: Awaited<ReturnType<TaskStore["get"]>>, instructio
     const history = task.conversation.filter((item) => item.role === "user").slice(0, -1).slice(-5).map((item) => item.content);
     const { privateTerms, ...profile } = await profileArtifactsForModel(task.files, [instruction, ...history].join("\n"));
     const suggested = await suggestPlanDetailed({ instruction, history, headers: task.files.flatMap((file) => file.sheets.map((sheet) => sheet.headers)), rowCounts: task.files.flatMap((file) => file.sheets.map((sheet) => sheet.rowCount)), inferredTypes: task.files.flatMap((file) => file.sheets.map((sheet) => sheet.inferredTypes)), sources, profile, privateTerms }, provider);
-    task.conversation.push(message("assistant", "已生成结构化计划，等待本地预览与确认。", { ...suggested.call, repairRounds: suggested.repairRounds, requestSummaryHash: promptHash({ instruction: "redacted", headers: contextHeaders(task) }), stages: { transport: "passed", structure: "passed", semantics: "passed" }, status: "success" })); return suggested.plan;
+    task.conversation.push(message("assistant", "已生成结构化计划，等待本地预览与确认。", { ...suggested.call, repairRounds: suggested.repairRounds, requestSummaryHash: promptHash({ instruction: "redacted", headers: contextHeaders(task) }), stages: { transport: "passed", structure: "passed", semantics: "passed" }, status: "success" })); return validatePlan({ ...suggested.plan, sheetSelections: task.sheetSelections });
   }
-  const plan = parseInstruction(instruction, sources); task.conversation.push(message("assistant", "已使用本地已确认规则生成计划。")); return plan;
+  const plan = parseInstruction(instruction, sources); task.conversation.push(message("assistant", "已使用本地已确认规则生成计划。")); return validatePlan({ ...plan, sheetSelections: task.sheetSelections });
 }
 async function sourcePatches(task: Awaited<ReturnType<TaskStore["get"]>>): Promise<SourcePatch[]> {
   return Promise.all((task.patches ?? []).map(async (patch) => {
@@ -97,7 +110,7 @@ async function sourcePatches(task: Awaited<ReturnType<TaskStore["get"]>>): Promi
 }
 function sourceAliases(task: Awaited<ReturnType<TaskStore["get"]>>): Record<string, Record<string, string[]>> {
   return Object.fromEntries(task.files.map((file) => {
-    const sheet = file.sheets.find((item) => item.rowCount > 0);
+    const sheet = file.sheets.find((item) => item.name === task.sheetSelections?.[file.path]?.sheet) ?? file.sheets.find((item) => item.rowCount > 0);
     const identity = sourceIdentityFor(task, file);
     const confirmed = sheet && identity ? store.mappings(identity.id, sheet.fingerprint).filter((item) => item.active && item.structureCompatible && sheet.headers.includes(item.sourceHeader) && item.standardField in FIELD_ALIASES) : [];
     return [file.path, Object.fromEntries(confirmed.map((item) => [item.standardField, [item.sourceHeader]]))];
@@ -115,8 +128,19 @@ function sourceIdentityFor(task: TaskRecord, file: SourceArtifact) { return task
 app.get("/health", async () => ({ ok: true }));
 app.get("/api/fields", async () => FIELD_ALIASES);
 app.get("/api/models/status", async () => publicModelStatus());
-app.get("/api/tasks", async () => store.list());
-app.post("/api/tasks", async () => store.create());
+app.get("/api/tasks", async (req) => (await store.list()).filter((task) => canReadTask(task, actor(req))));
+app.post("/api/tasks", async (req) => { const task = await store.create(); task.ownerId = actor(req).id; await store.save(task); return task; });
+app.put("/api/tasks/:id/access", async (req, reply) => {
+  if (actor(req).role !== "admin") return reply.code(403).send({ error: "任务授权需要管理员权限" });
+  const task = await store.get((req.params as { id: string }).id), body = req.body as { ownerId?: string; readers?: string[]; editors?: string[] };
+  if (task.status === "running") return reply.code(409).send({ error: "运行中任务不能修改授权" });
+  if (!Array.isArray(body.readers ?? []) || !Array.isArray(body.editors ?? [])) return reply.code(400).send({ error: "任务授权必须为用户 ID 数组" });
+  const ids = [...(body.readers ?? []), ...(body.editors ?? []), ...(body.ownerId ? [body.ownerId] : [])];
+  if (ids.some((id) => !access.users.some((user) => user.id === id))) return reply.code(400).send({ error: "任务授权只能引用已配置的用户 ID" });
+  if (body.ownerId) task.ownerId = body.ownerId;
+  task.access = { readers: [...new Set(body.readers ?? [])], editors: [...new Set(body.editors ?? [])] };
+  await store.save(task); return { ownerId: task.ownerId, access: task.access };
+});
 app.get("/api/tasks/:id", async (req) => store.get((req.params as any).id));
 app.get("/api/tasks/:id/runs", async (req) => (await store.get((req.params as any).id)).runs ?? []);
 async function requestRunCancellation(id: string, version?: number): Promise<TaskRecord> {
@@ -199,25 +223,51 @@ app.delete("/api/tasks/:id", async (req, reply) => { const task = await store.ge
 
 app.post("/api/tasks/:id/files", async (req) => {
   const id = (req.params as any).id, task = await store.get(id), uploadDir = join(store.taskDir(id), "uploads"); await mkdir(uploadDir, { recursive: true });
-  const uploaded = [];
-  for await (const part of req.files()) {
+  const uploaded: SourceArtifact[] = [];
+  try { for await (const part of req.files()) {
     const name = basename(part.filename).replace(/[^\p{L}\p{N}._ -]/gu, "_");
     const artifactId = `artifact-${crypto.randomUUID()}`, storedPath = join(uploadDir, `${artifactId}-${name}`);
-    await writeFile(storedPath, await part.toBuffer()); const artifact = await analyzeWorkbook(storedPath, artifactId); artifact.fileName = name; task.files.push(artifact); uploaded.push(artifact);
-  }
-  await store.save(task); return uploaded;
+    try {
+      await pipeline(part.file, createWriteStream(storedPath, { mode: 0o600 }));
+      if (part.file.truncated) throw Object.assign(new Error("文件超过上传体积限制"), { statusCode: 413 });
+      const artifact = await analyzeWorkbook(storedPath, artifactId); artifact.fileName = name; uploaded.push(artifact);
+    } catch (error) { await rm(storedPath, { force: true }); throw error; }
+  } } catch (error) { await Promise.all(uploaded.map((artifact) => rm(artifact.path, { force: true }))); throw error; }
+  task.files.push(...uploaded); invalidateConfirmation(task); task.status = "analyzed"; task.workflowStage = "analyze"; await store.save(task); return uploaded;
 });
 
 app.post("/api/tasks/:id/analyze", async (req) => {
   const task = await store.get((req.params as any).id); if (!task.files.length) throw new Error("请先上传文件");
   invalidateConfirmation(task); task.status = "analyzed"; task.workflowStage = "analyze";
   task.progress = { phase: "analyzing", completed: 0, total: task.files.length, message: "分析工作簿结构" }; await store.save(task);
-  task.files = await Promise.all(task.files.map(async (f) => { const analyzed = await analyzeWorkbook(f.path, f.id); analyzed.fileName = f.fileName; return analyzed; }));
+  task.files = await Promise.all(task.files.map(async (f) => { const analyzed = await analyzeWorkbook(f.path, f.id, Object.fromEntries(f.sheets.filter((sheet) => sheet.name === task.sheetSelections?.[f.path]?.sheet).map((sheet) => [sheet.id, task.sheetSelections![f.path].headerRows]))); analyzed.fileName = f.fileName; return analyzed; }));
   const stalePatches = (task.patches ?? []).filter((patch) => task.files.find((file) => file.id === patch.artifactId)?.sha256 !== patch.inputHash);
   task.archivedPatches = [...(task.archivedPatches ?? []), ...stalePatches]; task.patches = (task.patches ?? []).filter((patch) => !stalePatches.includes(patch));
   delete task.manifest; if (task.generic) delete task.generic.result;
   task.progress = { phase: "idle", completed: task.files.length, total: task.files.length, message: "结构分析完成" };
   task.workflowStage = "retrieve_rules"; await store.save(task); return task;
+});
+
+app.get("/api/tasks/:id/sheets/:artifactId/:sheetId/rows", async (req) => {
+  const { id, artifactId, sheetId } = req.params as Record<string, string>, task = await store.get(id);
+  const artifact = task.files.find((file) => file.id === artifactId), sheet = artifact?.sheets.find((sheet) => sheet.id === sheetId);
+  if (!artifact || !sheet) throw Object.assign(new Error("工作表不属于任务"), { statusCode: 400 });
+  return previewWorkbookRows(artifact.path, sheet.name);
+});
+app.post("/api/tasks/:id/sources/:artifactId/header", async (req) => {
+  const { id, artifactId } = req.params as Record<string, string>, task = await store.get(id), body = req.body as { sheetId?: string; headerRows?: number[] };
+  const artifact = task.files.find((file) => file.id === artifactId), sheet = artifact?.sheets.find((sheet) => sheet.id === body.sheetId);
+  if (!artifact || !sheet || !Array.isArray(body.headerRows) || !body.headerRows.length || body.headerRows.some((row) => !Number.isInteger(row) || row < 1)) throw Object.assign(new Error("请指定工作表及有效表头行"), { statusCode: 400 });
+  await verifyTaskInputs(task);
+  const analyzed = await analyzeWorkbook(artifact.path, artifact.id, { [sheet.id]: body.headerRows }); analyzed.fileName = artifact.fileName;
+  task.files[task.files.indexOf(artifact)] = analyzed;
+  task.sheetSelections ??= {}; task.sheetSelections[artifact.path] = { sheet: sheet.name, headerRows: body.headerRows };
+  if (task.plan) task.plan = validatePlan({ ...task.plan, sheetSelections: task.sheetSelections });
+  delete task.generic; delete task.manifest;
+  task.archivedPatches = [...(task.archivedPatches ?? []), ...(task.patches ?? []).filter((patch) => patch.artifactId === artifact.id)];
+  task.patches = (task.patches ?? []).filter((patch) => patch.artifactId !== artifact.id);
+  invalidateConfirmation(task); task.status = task.plan ? "awaiting_confirmation" : "analyzed"; task.workflowStage = "analyze";
+  await store.save(task); return task;
 });
 
 app.post("/api/tasks/:id/plan", async (req) => {
@@ -230,7 +280,7 @@ app.post("/api/tasks/:id/plan", async (req) => {
 });
 
 app.put("/api/tasks/:id/plan", async (req) => {
-  const task = await store.get((req.params as any).id); task.plan = validatePlan(req.body); delete task.generic; invalidateConfirmation(task); task.workflowStage = "preview"; task.status = "awaiting_confirmation"; await store.save(task); return task.plan;
+  const task = await store.get((req.params as any).id); task.plan = validatePlan({ ...(req.body as object), sheetSelections: task.sheetSelections }); delete task.generic; invalidateConfirmation(task); task.workflowStage = "preview"; task.status = "awaiting_confirmation"; await store.save(task); return task.plan;
 });
 
 async function loadVersionedConfig(kind: "rules" | "templates", id: string, version: number): Promise<unknown> {
@@ -312,11 +362,12 @@ app.post("/api/tasks/:id/v3/propose", async (req) => {
 app.post("/api/tasks/:id/v2/preview", async (req) => {
   const task = await store.get((req.params as any).id); if (!task.generic) throw new Error("任务尚无 V2 计划");
   await verifyTaskInputs(task);
-  const result = await executeWorkbookPlanV2({ ...task.generic, artifacts: task.files, allowDraft: ["draft", "validated"].includes(task.generic.rules.status) });
+  const result = await executeWorkbookPlanV2({ ...task.generic, artifacts: task.files, patches: task.patches, allowDraft: ["draft", "validated"].includes(task.generic.rules.status) });
   const prepared = batchTemplatedOutputs({ outputs: result.outputs, template: task.generic.template });
   const columns = task.generic.template.sheets[0].columns;
   const primary = prepared.outputs[task.generic.template.sheets[0].sheetId];
   task.previewHash = planBindingHash(task.generic.plan, task.files, task.patches, { rules: task.generic.rules, template: task.generic.template }); task.workflowStage = "confirm"; await store.save(task);
+  await writeFile(join(store.taskDir(task.id), "preview-exceptions.json"), JSON.stringify({ bindingHash: task.previewHash, exceptions: [...result.exceptions, ...prepared.exceptions] }), { mode: 0o600 });
   return { headers: columns.map((column) => column.header), rows: primary.rows.slice(0, 20).map((row) => ({ sourceRow: row.lineage[0]?.sourceRow ?? 0, cells: columns.map((column) => String(row.values[column.columnId] ?? column.defaultValue ?? "")) })), sheets: task.generic.template.sheets.map((sheet) => ({ sheetId: sheet.sheetId, name: sheet.name, headers: sheet.columns.map((column) => column.header), rows: prepared.outputs[sheet.sheetId].rows.slice(0, 20).map((row) => sheet.columns.map((column) => String(row.values[column.columnId] ?? column.defaultValue ?? ""))), outputRows: prepared.outputs[sheet.sheetId].rows.length })), batchCount: prepared.batches.length, exceptions: [...result.exceptions, ...prepared.exceptions].slice(0, 20), exceptionCount: result.exceptions.length + prepared.exceptions.length, stages: result.stages, reconciliation: { ...result.reconciliation, isolatedRows: result.reconciliation.isolatedRows + prepared.exceptions.length, outputRows: prepared.outputRows } };
 });
 
@@ -327,7 +378,7 @@ app.post("/api/tasks/:id/v2/confirm", async (req) => {
   if (task.generic.rules.status === "draft") task.generic.rules = transitionRuleStatus(transitionRuleStatus(task.generic.rules, "validated", "local-validator"), "confirmed", String((req.body as any)?.confirmedBy ?? "Web用户"));
   else if (task.generic.rules.status === "validated") task.generic.rules = transitionRuleStatus(task.generic.rules, "confirmed", String((req.body as any)?.confirmedBy ?? "Web用户"));
   task.planRevision = (task.planRevision ?? 0) + 1;
-  task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.generic.plan, task.files, task.patches, { rules: task.generic.rules, template: task.generic.template }), confirmedBy: String((req.body as any)?.confirmedBy ?? "Web用户"), confirmedAt: new Date().toISOString() };
+  task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.generic.plan, task.files, task.patches, { rules: task.generic.rules, template: task.generic.template }), confirmedBy: String((req.body as any)?.confirmedBy ?? "Web用户"), confirmedAt: new Date().toISOString(), actorId: actor(req).id };
   task.status = "ready"; task.workflowStage = "execute"; await store.save(task); return task;
 });
 
@@ -345,22 +396,26 @@ app.post("/api/tasks/:id/v2/execute", async (req, reply) => {
   if (task.status === "running") return reply.code(202).send(task);
   assertConfirmationCurrent(task);
   await verifyTaskInputs(task);
+  if (pendingRuns >= maxPendingRuns) return reply.code(429).header("retry-after", "5").send({ error: "执行队列已满，请稍后重试" });
+  pendingRuns++;
   const version = (task.runs?.at(-1)?.version ?? 0) + 1;
   const finalDir = join(store.taskDir(task.id), "outputs", `run-${version}`), stagingDir = `${finalDir}.staging`;
-  const run: NonNullable<typeof task.runs>[number] = { version, status: "running", outputDir: stagingDir, startedAt: new Date().toISOString(), planRevision: task.planRevision ?? 0, patchIds: [], bindingHash: task.confirmation?.bindingHash, idempotencyKey: key, snapshot: { plan: structuredClone(task.generic.plan), inputs: task.files.map((file) => ({ artifactId: file.id, sha256: file.sha256 })), rules: structuredClone(task.generic.rules), template: structuredClone(task.generic.template), patches: [] } };
+  const run: NonNullable<typeof task.runs>[number] = { version, status: "running", outputDir: stagingDir, startedAt: new Date().toISOString(), planRevision: task.planRevision ?? 0, patchIds: (task.patches ?? []).map((patch) => patch.id), bindingHash: task.confirmation?.bindingHash, idempotencyKey: key, snapshot: { plan: structuredClone(task.generic.plan), inputs: task.files.map((file) => ({ artifactId: file.id, sha256: file.sha256 })), rules: structuredClone(task.generic.rules), template: structuredClone(task.generic.template), patches: structuredClone(task.patches ?? []) } };
   task.runs ??= []; task.runs.push(run); task.status = "running"; task.cancelRequested = false;
   task.progress = { phase: "queued", completed: 0, total: 3, message: "等待本机执行队列" };
   try { await store.save(task); } catch (error) {
+    pendingRuns--;
     if (error instanceof TaskRevisionConflictError) { const current = await store.get(task.id); if (current.status === "running") return reply.code(202).send(current); }
     throw error;
   }
   const job = executionQueue.then(async () => {
+    activeRuns++;
     try {
       await mkdir(stagingDir, { recursive: true });
       await waitForExecutionSlot();
       task.progress = { phase: "executing", completed: 1, total: 3, message: "执行通用计划" }; await saveRunState(task);
       const snapshot = run.snapshot!;
-      const result = await executeWorkbookPlanV2({ plan: snapshot.plan as ProcessPlanV2 | ProcessPlanV3, rules: snapshot.rules!, template: snapshot.template!, artifacts: task.files });
+      const result = await executeWorkbookPlanV2({ plan: snapshot.plan as ProcessPlanV2 | ProcessPlanV3, rules: snapshot.rules!, template: snapshot.template!, artifacts: task.files, patches: snapshot.patches });
       const prepared = batchTemplatedOutputs({ outputs: result.outputs, template: snapshot.template! });
       const outputFiles: Array<{ fileName: string; sha256: string; outputRows: number }> = [];
       for (let index = 0; index < prepared.batches.length; index++) {
@@ -374,7 +429,7 @@ app.post("/api/tasks/:id/v2/execute", async (req, reply) => {
       const exceptions = [...result.exceptions, ...prepared.exceptions];
       if (exceptions.length) await writeExceptions(exceptions, join(stagingDir, "异常日志.xlsx"));
       const output = { outputFile: outputFiles[0].fileName, outputFiles, outputRows: prepared.outputRows, stages: result.stages, reconciliation: { ...result.reconciliation, isolatedRows: result.reconciliation.isolatedRows + prepared.exceptions.length, outputRows: prepared.outputRows }, exceptions: exceptions.length, sha256: outputFiles[0].sha256 };
-      await writeFile(join(stagingDir, "审计清单.json"), `${JSON.stringify({ taskId: task.id, plan: snapshot.plan, rule: snapshot.rules, template: snapshot.template, inputs: snapshot.inputs, output, confirmedAt: task.confirmation?.confirmedAt, confirmedBy: task.confirmation?.confirmedBy }, null, 2)}\n`);
+      await writeFile(join(stagingDir, "审计清单.json"), `${JSON.stringify({ taskId: task.id, plan: snapshot.plan, rule: snapshot.rules, template: snapshot.template, inputs: snapshot.inputs, patches: snapshot.patches, confirmation: task.confirmation, output, confirmedAt: task.confirmation?.confirmedAt, confirmedBy: task.confirmation?.confirmedBy }, null, 2)}\n`);
       await verifyTaskInputs(task); await runCheckpoint(task); await rename(stagingDir, finalDir);
       task.generic!.result = output; task.currentOutputDir = finalDir; run.outputDir = finalDir; run.artifacts = await readdir(finalDir);
       task.status = exceptions.length ? "completed_with_exceptions" : "completed"; run.status = task.status; run.completedAt = new Date().toISOString();
@@ -385,7 +440,7 @@ app.post("/api/tasks/:id/v2/execute", async (req, reply) => {
       await rm(stagingDir, { recursive: true, force: true });
       if (outcome.status !== "cancelled") throw error;
     }
-  });
+  }).finally(() => { pendingRuns--; activeRuns--; });
   executionQueue = job.then(() => undefined, () => undefined);
   await job; return store.get(task.id);
 });
@@ -410,6 +465,7 @@ app.post("/api/tasks/:id/preview", async (req) => {
   task.mappingSnapshot = sourceAliases(task);
   const previewPlan = validatePlan({ ...task.plan, allowStaleBalance: true }), result = await executePlan(previewPlan, await sourcePatches(task), task.mappingSnapshot);
   task.previewHash = planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot });
+  await writeFile(join(store.taskDir(task.id), "preview-exceptions.json"), JSON.stringify({ bindingHash: task.previewHash, exceptions: result.exceptions }), { mode: 0o600 });
   const isStale = Boolean(result.isStaleBalance);
   const requiresStaleBalanceConfirmation = task.plan.operation === "annual_leave_settlement" && isStale;
   task.staleBalanceCheck = task.plan.operation === "annual_leave_settlement" ? {
@@ -426,6 +482,7 @@ app.post("/api/tasks/:id/preview", async (req) => {
     headers: result.headers,
     rows: result.rows.slice(0, 20),
     exceptions: result.exceptions.slice(0, 20),
+    exceptionCount: result.exceptions.length,
     summary: result.summary,
     stages: result.stages,
     reconciliation: { inputRows: result.sourceCount, outputRows: result.rows.length, isolatedRows: result.exceptions.filter((error) => error.severity === "error").length },
@@ -436,17 +493,30 @@ app.post("/api/tasks/:id/preview", async (req) => {
   };
 });
 
+app.get("/api/tasks/:id/exceptions", async (req, reply) => {
+  const task = await store.get((req.params as { id: string }).id), query = req.query as { offset?: string; limit?: string };
+  const offset = Number(query.offset ?? 0), limit = Number(query.limit ?? 20);
+  if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 100) return reply.code(400).send({ error: "异常分页参数无效" });
+  if (!task.previewHash) return reply.code(409).send({ error: "请先完成当前计划预演" });
+  await verifyTaskInputs(task);
+  const saved = JSON.parse(await readFile(join(store.taskDir(task.id), "preview-exceptions.json"), "utf8"));
+  if (saved.bindingHash !== task.previewHash) return reply.code(409).send({ error: "异常列表已失效，请重新预演" });
+  return { total: saved.exceptions.length, offset, exceptions: saved.exceptions.slice(offset, offset + limit) };
+});
+
 app.post("/api/tasks/:id/confirm", async (req, reply) => {
-  const task = await store.get((req.params as any).id), body = req.body as any;
+  const task = await store.get((req.params as any).id), body = (req.body ?? {}) as any;
   if (!task.plan) throw new Error("任务尚无计划");
   await verifyTaskInputs(task);
   if (!task.previewHash || task.previewHash !== planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot })) throw new Error("请先完成与当前输入和补丁一致的完整预演");
-  if (task.plan.operation === "annual_leave_settlement" && task.staleBalanceCheck?.isStale && !body.allowStaleBalance) {
+  if (task.plan.operation === "annual_leave_settlement" && task.staleBalanceCheck?.isStale && body.allowStaleBalance !== true) {
     return reply.code(400).send({ error: `${task.staleBalanceCheck.reason ?? "余额时点可能过期"}。必须由 HR 显式确认使用该余额后方可继续，或请重新上传最新年假余额表。` });
   }
-  task.plan = validatePlan({ ...task.plan, allowStaleBalance: Boolean(body.allowStaleBalance), confirmedBy: String(body.confirmedBy ?? "Web用户") });
+  const stale = task.plan.operation === "annual_leave_settlement" && task.staleBalanceCheck?.isStale;
+  if (stale && (typeof body.confirmedBy !== "string" || !body.confirmedBy.trim() || typeof body.staleBalanceEvidence !== "string" || !body.staleBalanceEvidence.trim())) return reply.code(400).send({ error: "旧余额确认必须填写 HR 签署人和核实依据" });
+  task.plan = validatePlan({ ...task.plan, allowStaleBalance: Boolean(stale && body.allowStaleBalance === true), confirmedBy: stale ? body.confirmedBy.trim() : actor(req).id, staleBalanceEvidence: stale ? body.staleBalanceEvidence.trim() : undefined });
   task.planRevision = (task.planRevision ?? 0) + 1;
-  task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot }), confirmedBy: task.plan.confirmedBy ?? "Web用户", confirmedAt: new Date().toISOString() };
+  task.confirmation = { planRevision: task.planRevision, bindingHash: planBindingHash(task.plan, task.files, task.patches, { aliases: task.mappingSnapshot }), confirmedBy: task.plan.confirmedBy ?? "Web用户", confirmedAt: new Date().toISOString(), actorId: actor(req).id, ...(stale ? { staleBalance: { ...task.staleBalanceCheck, evidence: task.plan.staleBalanceEvidence! } } : {}) };
   task.workflowStage = "execute";
   task.status = "ready";
   await store.save(task);
@@ -466,16 +536,20 @@ app.post("/api/tasks/:id/execute", async (req, reply) => {
   if (task.status === "running") return reply.code(202).send(task);
   assertConfirmationCurrent(task);
   await verifyTaskInputs(task);
+  if (pendingRuns >= maxPendingRuns) return reply.code(429).header("retry-after", "5").send({ error: "执行队列已满，请稍后重试" });
+  pendingRuns++;
   const version = (task.runs?.at(-1)?.version ?? 0) + 1;
   const finalDir = join(store.taskDir(task.id), "outputs", `run-${version}`), stagingDir = `${finalDir}.staging`;
   const run: NonNullable<typeof task.runs>[number] = { version, status: "running", outputDir: stagingDir, startedAt: new Date().toISOString(), planRevision: task.planRevision ?? 0, patchIds: (task.patches ?? []).map((patch) => patch.id), bindingHash: task.confirmation?.bindingHash, idempotencyKey: key, snapshot: { plan: structuredClone(task.plan), inputs: task.files.map((file) => ({ artifactId: file.id, sha256: file.sha256 })), patches: structuredClone(task.patches ?? []), mappingSnapshot: structuredClone(task.mappingSnapshot ?? {}) } };
   task.runs ??= []; task.runs.push(run); task.status = "running"; task.cancelRequested = false;
   task.progress = { phase: "queued", completed: 0, total: 3, message: "等待本机执行队列" };
   try { await store.save(task); } catch (error) {
+    pendingRuns--;
     if (error instanceof TaskRevisionConflictError) { const current = await store.get(task.id); if (current.status === "running") return reply.code(202).send(current); }
     throw error;
   }
   const job = executionQueue.then(async () => {
+    activeRuns++;
     try {
       await mkdir(stagingDir, { recursive: true });
       await waitForExecutionSlot();
@@ -483,7 +557,7 @@ app.post("/api/tasks/:id/execute", async (req, reply) => {
       const snapshot = run.snapshot!;
       const result = await executePlan(snapshot.plan as ProcessPlan, await sourcePatches({ ...task, patches: snapshot.patches }), snapshot.mappingSnapshot);
       task.progress = { phase: "writing", completed: 2, total: 3, message: "写出并复读校验" }; await saveRunState(task);
-      const manifest = await writeDeliverables({ taskId: task.id, outputDir: stagingDir, result, plan: snapshot.plan as ProcessPlan, confirmedBy: (snapshot.plan as ProcessPlan).confirmedBy });
+      const manifest = await writeDeliverables({ taskId: task.id, outputDir: stagingDir, result, plan: snapshot.plan as ProcessPlan, confirmedBy: (snapshot.plan as ProcessPlan).confirmedBy, approval: task.confirmation, patches: snapshot.patches });
       await verifyTaskInputs(task); await runCheckpoint(task); await rename(stagingDir, finalDir);
       task.manifest = manifest; task.currentOutputDir = finalDir; run.outputDir = finalDir; run.artifacts = await readdir(finalDir);
       task.status = manifest.status; run.status = manifest.status; run.completedAt = new Date().toISOString();
@@ -495,20 +569,24 @@ app.post("/api/tasks/:id/execute", async (req, reply) => {
       await rm(stagingDir, { recursive: true, force: true });
       if (outcome.status !== "cancelled") throw error;
     }
-  });
+  }).finally(() => { pendingRuns--; activeRuns--; });
   executionQueue = job.then(() => undefined, () => undefined);
   await job; return store.get(task.id);
 });
 
 app.post("/api/tasks/:id/patches", async (req) => {
   const task = await store.get((req.params as any).id), body = req.body as any;
-  if (task.generic) throw new Error("通用任务源补丁尚未开放，请修改源文件后重新上传");
+
   const artifact = task.files.find((file) => file.id === body.artifactId), sheet = artifact?.sheets.find((item) => item.id === body.sheetId);
   const column = sheet?.columns.find((item) => item.id === body.columnId);
-  if (!body.exceptionId || !["correct", "exclude"].includes(body.action) || !Number.isInteger(body.sourceRow) || body.sourceRow < 1 || !artifact || !sheet || (body.action === "correct" && (!column || body.value === undefined || typeof body.value === "object"))) throw new Error("源数据补丁参数无效：需指定任务内文件、工作表、源行及源列");
+  if (!body.exceptionId || !["correct", "exclude"].includes(body.action) || !Number.isInteger(body.sourceRow) || body.sourceRow < 1 || !artifact || !sheet || (body.action === "correct" && (!column || body.value === undefined || (body.value !== null && typeof body.value === "object")))) throw new Error("源数据补丁参数无效：需指定任务内文件、工作表、源行及源列");
   if (await sha256File(artifact.path) !== artifact.sha256) throw new Error("源文件内容已变化，请重新上传");
-  const patch = { id: crypto.randomUUID(), exceptionId: String(body.exceptionId), action: body.action as "correct" | "exclude", artifactId: artifact.id, sheetId: sheet.id, sourceRow: body.sourceRow as number, columnId: column?.id, inputHash: artifact.sha256, value: body.action === "correct" ? body.value as string | number | boolean | null : undefined, createdAt: new Date().toISOString(), createdBy: String(body.createdBy ?? "Web用户") };
-  task.patches ??= []; task.patches.push(patch); invalidateConfirmation(task); task.status = "awaiting_confirmation"; task.workflowStage = "preview"; await store.save(task); return patch;
+  const binding = task.generic?.plan.inputs.find((input) => input.artifactId === artifact.id && input.sheetId === sheet.id);
+  const tab = readTabularSheet(await readWorkbook(artifact.path), { sheet: sheet.name, headerRows: binding?.headerRows ?? task.sheetSelections?.[artifact.path]?.headerRows ?? [sheet.headerRow] });
+  if (!tab.sourceRows.includes(body.sourceRow)) throw Object.assign(new Error("补丁只能引用实际数据行，不能修改表头或不存在的行"), { statusCode: 400 });
+  if (typeof body.reason !== "string" || !body.reason.trim() || typeof body.evidence !== "string" || !body.evidence.trim()) throw Object.assign(new Error("人工修正或排除必须填写处理原因及核实依据"), { statusCode: 400 });
+  const patch = { id: crypto.randomUUID(), exceptionId: String(body.exceptionId), action: body.action as "correct" | "exclude", artifactId: artifact.id, sheetId: sheet.id, sourceRow: body.sourceRow as number, columnId: column?.id, inputHash: artifact.sha256, value: body.action === "correct" ? body.value as string | number | boolean | null : undefined, createdAt: new Date().toISOString(), createdBy: actor(req).id, reason: body.reason ? String(body.reason) : undefined, evidence: body.evidence ? String(body.evidence) : undefined };
+  task.patches ??= []; task.patches.push(patch); delete task.manifest; if (task.generic) delete task.generic.result; invalidateConfirmation(task); task.status = "awaiting_confirmation"; task.workflowStage = "preview"; await store.save(task); return patch;
 });
 
 app.post("/api/tasks/:id/rerun", async (req, reply) => {
@@ -553,13 +631,25 @@ app.get("/api/rules/:id/diff", async (req) => {
   return diffRuleRevisions(RuleSetVersionSchema.parse(await loadVersionedConfig("rules", id, fromVersion)), RuleSetVersionSchema.parse(await loadVersionedConfig("rules", id, toVersion)));
 });
 app.get("/api/templates", async () => listConfigs("templates"));
+app.get("/api/templates/:id/diff", async (req) => {
+  const { id } = req.params as { id: string }, { from, to } = req.query as { from?: string; to?: string };
+  const fromVersion = Number(from), toVersion = Number(to);
+  if (!Number.isInteger(fromVersion) || fromVersion < 1 || !Number.isInteger(toVersion) || toVersion < 1) throw Object.assign(new Error("模板差异必须指定有效版本"), { statusCode: 400 });
+  return { id, fromVersion, toVersion, from: TargetTemplateVersionSchema.parse(await loadVersionedConfig("templates", id, fromVersion)), to: TargetTemplateVersionSchema.parse(await loadVersionedConfig("templates", id, toVersion)) };
+});
 app.post("/api/rules/:id/revisions", async (req) => {
   const id = StableIdSchema.parse((req.params as any).id), body = req.body as any;
   if (body.patch) {
     const current = await latestRule(id), patch = RulePatchSchema.parse(body.patch);
     return writeNewRule(applyRulePatch(current, patch, String(body.editedBy ?? "Web用户")));
   }
-  const proposed = RuleSetVersionSchema.parse({ ...body.rule, id, version: 1, status: "draft", confirmedBy: undefined, confirmedAt: undefined, effectiveFrom: undefined });
+  if (body.baseRevision !== undefined) {
+    const current = await latestRule(id);
+    if (current.status === "superseded") throw new Error("已取代规则不能作为修订基础");
+    if (body.baseRevision !== current.version) throw new RuleRevisionConflictError(Number(body.baseRevision), current.version);
+    return writeNewRule(RuleSetVersionSchema.parse({ ...body.rule, id, version: current.version + 1, parentRevision: current.version, status: "draft", provenance: { kind: "manual", editedBy: actor(req).id }, confirmedBy: undefined, confirmedAt: undefined, effectiveFrom: undefined }));
+  }
+  const proposed = RuleSetVersionSchema.parse({ ...body.rule, provenance: { kind: "manual", editedBy: actor(req).id }, id, version: 1, status: "draft", confirmedBy: undefined, confirmedAt: undefined, effectiveFrom: undefined });
   return writeNewRule(proposed);
 });
 app.post("/api/rules/:id/revisions/propose-patch", async (req) => {
@@ -593,7 +683,7 @@ app.post("/api/rules/:id/restore", async (req) => {
 app.put("/api/rules/:id", async (req) => {
   const requested = RuleSetVersionSchema.parse(req.body), id = StableIdSchema.parse((req.params as any).id); if (requested.id !== id) throw new Error("规则 ID 与路径不一致");
   let value = RuleSetVersionSchema.parse({ ...requested, status: "draft", scope: requested.scope.kind === "source" ? requested.scope : { kind: "source", sourceIdentity: "legacy:manual" }, confirmedBy: undefined, confirmedAt: undefined });
-  value = transitionRuleStatus(value, "validated", "local-validator"); value = transitionRuleStatus(value, "confirmed", "兼容接口"); value = transitionRuleStatus(value, "published", "兼容接口");
+  value = transitionRuleStatus(value, "validated", "local-validator"); value = transitionRuleStatus(value, "confirmed", actor(req).id); value = transitionRuleStatus(value, "published", actor(req).id);
   return writeNewRule(value);
 });
 app.put("/api/templates/:id", async (req) => { const value = TargetTemplateVersionSchema.parse(req.body), id = StableIdSchema.parse((req.params as any).id); if (value.id !== id) throw new Error("模板 ID 与路径不一致"); const directory = join(configRoot, "templates"); await mkdir(directory, { recursive: true }); const path = join(directory, `${id}.v${value.version}.json`); try { await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, { flag: "wx" }); } catch (error) { if ((error as NodeJS.ErrnoException).code === "EEXIST") throw new Error("模板版本已存在，禁止覆盖"); throw error; } return value; });

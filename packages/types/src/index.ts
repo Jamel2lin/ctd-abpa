@@ -67,11 +67,13 @@ export const ProcessPlanSchema = z.object({
   version: z.literal(1),
   operation: z.enum(["erp_overtime_to_hr", "oa_leave_to_hr", "annual_leave_settlement"]),
   sources: z.record(z.string(), z.string()),
+  sheetSelections: z.record(z.string(), z.object({ sheet: z.string(), headerRows: z.array(z.number().int().positive()).min(1) })).optional(),
   filters: z.array(FilterSpecSchema).default([]),
   mappingProfile: z.string().optional(),
   settlement: SettlementRuleSchema.optional(),
   allowStaleBalance: z.boolean().default(false),
   confirmedBy: z.string().optional(),
+  staleBalanceEvidence: z.string().min(1).optional(),
 });
 export type ProcessPlan = z.infer<typeof ProcessPlanSchema>;
 
@@ -357,6 +359,8 @@ export interface ArtifactManifest {
   calculationSummary: Record<string, number>;
   exceptions: { total: number; warnings: number; errors: number; resolved: number };
   confirmations: Array<{ type: string; confirmedBy: string; confirmedAt: string; details?: Record<string, unknown> }>;
+  patches?: TaskRecord["patches"];
+  approval?: TaskRecord["confirmation"];
 }
 
 export interface StageReconciliation {
@@ -370,6 +374,8 @@ export interface StageReconciliation {
 
 export interface TaskRecord {
   id: string;
+  ownerId?: string;
+  access?: { readers: string[]; editors: string[] };
   revision?: number;
   status: TaskStatus;
   createdAt: string;
@@ -384,13 +390,14 @@ export interface TaskRecord {
   previewHash?: string;
   mappingSnapshot?: Record<string, Record<string, string[]>>;
   cancelRequested?: boolean;
-  confirmation?: { planRevision: number; bindingHash: string; confirmedBy: string; confirmedAt: string };
+  confirmation?: { planRevision: number; bindingHash: string; confirmedBy: string; confirmedAt: string; actorId?: string; staleBalance?: { balanceAsOf?: string; latestLeaveDate?: string; reason?: string; evidence: string } };
   conversation?: Array<{ id: string; role: "user" | "assistant"; content: string; createdAt: string; modelCall?: { provider: string; model: string; status: string; attempts?: number; usage?: ModelUsageRecord; latencyMs?: number; finishReason?: string; repairRounds?: number; requestSummaryHash?: string; stages?: Record<string, "passed" | "failed" | "not_run"> } }>;
   clarificationQuestions?: string[];
   mappingSuggestions?: Array<{ standardField: string; sourceHeader: string; confidence: number; rationale: string }>;
   sourceIdentities?: Record<string, SourceIdentity>;
+  sheetSelections?: Record<string, { sheet: string; headerRows: number[] }>;
   ruleDraft?: RuleDraft;
-  patches?: Array<{ id: string; exceptionId: string; action: "correct" | "exclude"; artifactId: string; sheetId: string; sourceRow: number; columnId?: string; inputHash: string; value?: Scalar; createdAt: string; createdBy: string }>;
+  patches?: Array<{ id: string; exceptionId: string; action: "correct" | "exclude"; artifactId: string; sheetId: string; sourceRow: number; columnId?: string; inputHash: string; value?: Scalar; createdAt: string; createdBy: string; reason?: string; evidence?: string }>;
   archivedPatches?: NonNullable<TaskRecord["patches"]>;
   runs?: Array<{ version: number; status: TaskStatus; outputDir: string; startedAt: string; completedAt?: string; planRevision: number; patchIds: string[]; bindingHash?: string; idempotencyKey?: string; artifacts?: string[]; snapshot?: { plan: AnyProcessPlan; inputs: Array<{ artifactId: string; sha256: string }>; rules?: RuleSetVersion; template?: TargetTemplateVersion; patches: NonNullable<TaskRecord["patches"]>; mappingSnapshot?: Record<string, Record<string, string[]>> } }>;
   currentOutputDir?: string;

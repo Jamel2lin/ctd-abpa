@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { processAnnualSettlement, processLeave, processOvertime, readWorkbook, readTabularSheet } from "@ctd-abpa/excel";
 
-const data = resolve("data/自动化桥接与处理智能体数据集file");
+const data = resolve(process.env.CTD_TEST_DATA_DIR ?? "data/自动化桥接与处理智能体数据集file");
+const requiredFiles = ["ERP导出加班.XLSX", "OA导出请假单.xlsx", "HR 系统需要最低版本导入.xls", "年假.xls"];
+const hasRealData = requiredFiles.every((file) => existsSync(resolve(data, file)));
 
-describe("真实数据黄金验收", () => {
+describe.skipIf(!hasRealData)("真实数据黄金验收", () => {
   it("ERP 加班", async () => {
     const r = await processOvertime(resolve(data, "ERP导出加班.XLSX"));
     expect(r.sourceCount).toBe(36_001); expect(r.rows).toHaveLength(35_970);

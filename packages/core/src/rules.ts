@@ -77,5 +77,5 @@ export function diffRuleRevisions(fromInput: RuleSetVersion, toInput: RuleSetVer
     const previous = fromSteps.get(step.stepId);
     return previous && previous.index !== toIndex ? [{ stepId: step.stepId, fromIndex: previous.index, toIndex }] : [];
   });
-  return { id: from.id, fromVersion: from.version, toVersion: to.version, status: { from: from.status, to: to.status }, scope: { from: from.scope, to: to.scope }, steps: { added, removed, changed, reordered } };
+  return { id: from.id, fromVersion: from.version, toVersion: to.version, name: { from: from.name, to: to.name }, aliases: { from: from.aliases, to: to.aliases }, status: { from: from.status, to: to.status }, scope: { from: from.scope, to: to.scope }, steps: { added, removed, changed, reordered } };
 }

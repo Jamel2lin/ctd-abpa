@@ -48,3 +48,19 @@ test("网页 V2 配置、预览、确认、执行和异常下载", async ({ page
   const repeat = await page.request.post(`http://127.0.0.1:3210/api/tasks/${task.id}/v2/execute`); expect((await repeat.json()).runs).toHaveLength(1);
   await page.getByPlaceholder("规则ID@版本号").fill(`${rules.id}@1`); await page.getByRole("button", { name: "标记已取代" }).click(); await expect(page.getByText("规则已标记为已取代", { exact: true })).toBeVisible();
 });
+
+test("异常分页能处理第20条之后的通用源行", async ({ page }) => {
+  const created = page.waitForResponse(response => response.url().endsWith("/api/tasks") && response.request().method() === "POST"); await page.goto("/"); const initial = await (await created).json();
+  await page.locator('input[type="file"]').setInputFiles({ name: "paging.csv", mimeType: "text/csv", buffer: Buffer.from(`SKU,数量\nOK,1\n${Array.from({ length: 25 }, (_, i) => `BAD${i},bad`).join("\n")}\n`) });
+  await page.getByRole("button", { name: "上传并分析" }).click(); await expect(page.getByText("结构分析完成", { exact: true })).toBeVisible();
+  const task = await (await page.request.get(`http://127.0.0.1:3210/api/tasks/${initial.id}`)).json(), file = task.files[0], sheet = file.sheets[0], id = `paging-${Date.now()}`;
+  const steps = [{ stepId: "converted", input: "source", operator: "convert", conversions: [{ columnId: "qty", to: "integer", onError: "isolate" }] }];
+  expect((await page.request.put(`http://127.0.0.1:3210/api/rules/${id}`, { data: { id, version: 1, name: "分页测试", status: "published", steps } })).ok()).toBe(true);
+  expect((await page.request.put(`http://127.0.0.1:3210/api/templates/${id}`, { data: { id, version: 1, format: "xlsx", sheets: [{ sheetId: "out", name: "结果", headerRow: 1, columns: [{ columnId: "qty", header: "数量", dataType: "integer" }] }] } })).ok()).toBe(true);
+  const plan = { version: 2, planId: id, revision: 1, rules: { id, version: 1 }, targetTemplate: { id, version: 1 }, inputs: [{ bindingId: "source", artifactId: file.id, sheetId: sheet.id, headerRows: [1], columns: [{ columnId: "sku", sourceIndex: 0, sourceHeader: "SKU" }, { columnId: "qty", sourceIndex: 1, sourceHeader: "数量" }] }], steps };
+  await page.getByRole("button", { name: "通用表格任务" }).click(); await page.getByPlaceholder("高级入口：ProcessPlanV2 / V3 JSON").fill(JSON.stringify(plan)); await page.getByRole("button", { name: "绑定手工计划" }).click(); await page.getByRole("button", { name: "完整预演" }).click();
+  await expect(page.getByText(/异常总数: 25/)).toBeVisible(); await page.getByRole("button", { name: "下一页异常" }).click(); await expect(page.locator(".exception")).toHaveCount(5);
+  const answers = ["合成样本排除", "分页核实记录 PAGE-21"]; page.on("dialog", async (dialog) => dialog.accept(answers.shift() ?? ""));
+  await page.getByRole("button", { name: "排除源行并预览" }).first().click(); await expect(page.getByText(/异常总数: 24/)).toBeVisible();
+  const patched = await (await page.request.get(`http://127.0.0.1:3210/api/tasks/${initial.id}`)).json(); expect(patched.patches[0].sourceRow).toBe(23);
+});

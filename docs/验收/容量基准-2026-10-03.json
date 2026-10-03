@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-10-02T17:16:53.658Z",
+  "node": "v24.21.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "workload": "合成 CSV：类型转换、100 SKU 分类求和、XLSX 写出与复读；同进程依次运行，峰值内存为累计值；不含 HTTP 上传与真实多用户并发",
+  "results": [
+    {
+      "inputRows": 10000,
+      "inputBytes": 60011,
+      "outputRows": 100,
+      "analyzeMs": 11,
+      "executeMs": 40,
+      "totalWithWriteReadMs": 62,
+      "rssBytesAfter": 165691392,
+      "processPeakRssBytes": 165707776,
+      "goldenComparison": "passed"
+    },
+    {
+      "inputRows": 100000,
+      "inputBytes": 600011,
+      "outputRows": 100,
+      "analyzeMs": 66,
+      "executeMs": 333,
+      "totalWithWriteReadMs": 407,
+      "rssBytesAfter": 498892800,
+      "processPeakRssBytes": 502611968,
+      "goldenComparison": "passed"
+    }
+  ]
+}
