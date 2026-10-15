@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
-import { combineLocalDateTime, compareLocalDateTime, decimalHoursToMinutes, decimalMultiplyToInteger, employeeId, executePlanV2, matchFields, minutesToHoursText, parseLocalDate, requireFields, safeSpreadsheetText, type DataSetV2, type StageReconciliationV2 } from "@ctd-abpa/core";
+import { canonicalField, combineLocalDateTime, compareLocalDateTime, decimalHoursToMinutes, decimalMultiplyToInteger, employeeId, executePlanV2, matchFields, minutesToHoursText, parseLocalDate, requireFields, safeSpreadsheetText, type DataSetV2, type StageReconciliationV2 } from "@ctd-abpa/core";
 import { ProcessPlanV3Schema, SettlementRuleSchema, type ExceptionBusinessLevel, type ExceptionDisposition, type ExceptionRecord, type FilterSpec, type NormalizedRow, type ProcessPlan, type ProcessStepV2, type RuleSetVersion, type SettlementRule, type TargetTemplateVersion } from "@ctd-abpa/types";
 import { readTabularSheet, readWorkbook, type CellValue, type ReadSheetOptions } from "./workbook.js";
 
@@ -59,7 +59,7 @@ function rawObject(headers: string[], row: CellValue[]): Record<string, unknown>
 function filterRowsV3(args: { id: string; rows: Array<{ sourceRow: number; sourceFile: string; sourceSheet: string; values: Record<string, string | number> }>; columns: DataSetV2["columns"]; filters: FilterSpec[]; outputColumns?: TargetTemplateVersion["sheets"][number]["columns"] }): { rows: DataSetV2["rows"]; sourceRows: Set<number>; stages: StageReconciliationV2[] } {
   const columns = { ...args.columns, source_row: "integer" as const };
   const data: DataSetV2 = { columns, rows: args.rows.map((row) => ({ values: { ...row.values, source_row: row.sourceRow }, lineage: [{ sourceFile: row.sourceFile, sourceSheet: row.sourceSheet, sourceRow: row.sourceRow }] })) };
-  const predicate = (filter: FilterSpec) => ({ kind: "compare" as const, operator: filter.operator, left: { kind: "column" as const, columnId: filter.field }, right: Array.isArray(filter.value) ? filter.value.map((value) => ({ kind: "literal" as const, value })) : { kind: "literal" as const, value: filter.value } });
+  const predicate = (filter: FilterSpec) => ({ kind: "compare" as const, operator: filter.operator, left: { kind: "column" as const, columnId: canonicalField(filter.field) }, right: Array.isArray(filter.value) ? filter.value.map((value) => ({ kind: "literal" as const, value })) : { kind: "literal" as const, value: filter.value } });
   const steps: ProcessStepV2[] = args.filters.length
     ? [{ stepId: `${args.id}.filter`, input: "source", operator: "filter", predicate: args.filters.length === 1 ? predicate(args.filters[0]) : { kind: "all", items: args.filters.map(predicate) } }]
     : [{ stepId: `${args.id}.select`, input: "source", operator: "select", columns: Object.keys(columns) }];

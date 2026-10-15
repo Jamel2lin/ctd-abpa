@@ -63,12 +63,14 @@ test("库存：映射计算、网页修正和排除、审计历史、已发布�
   await output(builder, "item_code", "SKU"); await output(builder, "double_qty", "双倍数量", "integer");
   const first = await publishAndRun(page, id, [["A", 4], ["C", 6]]); expect(first.generic.result.exceptions).toBe(1);
   let answers = ["数量", "4", "独立复核数量", "合成来源记录INV-001"]; page.on("dialog", async (dialog) => { await dialog.accept(answers.shift() ?? ""); });
+  await page.getByRole("button", { name: "上一步" }).click();
   await page.getByRole("button", { name: "修正源值并预览" }).first().click(); await expect(page.getByText("人工处理记录已保存并重算；请重新确认", { exact: true })).toBeVisible();
   expect((await page.request.post(`${base}/api/tasks/${id}/v2/execute`)).ok()).toBe(false);
   await page.getByRole("button", { name: "确认当前计划", exact: true }).click(); await expect(page.locator(".status strong")).toHaveText("ready"); await page.getByRole("button", { name: "执行并生成文件" }).click(); await expect(page.locator(".status strong")).toHaveText("completed");
   const second = await (await page.request.get(`${base}/api/tasks/${id}`)).json(); expect(second.runs).toHaveLength(2); expect(second.generic.result.outputRows).toBe(3); expect(second.runs[1].snapshot.patches[0].evidence).toBe("合成来源记录INV-001");
   const audit = await (await page.request.get(`${base}/api/tasks/${id}/artifacts/${encodeURIComponent("审计清单.json")}`)).json(); expect(audit.patches[0].reason).toBe("独立复核数量");
   const badPatch = { ...second.patches[0], exceptionId: "fault-injection", value: "bad", reason: "合成故障注入", evidence: "INV-002" }; expect((await page.request.post(`${base}/api/tasks/${id}/patches`, { data: badPatch })).ok()).toBe(true);
+  await page.getByRole("button", { name: "上一步" }).click();
   await page.getByRole("button", { name: "完整预演" }).click(); answers = ["复核后排除无效记录", "合成来源记录INV-003"];
   await page.getByRole("button", { name: "排除源行并预览" }).first().click(); await expect(page.getByText("人工处理记录已保存并重算；请重新确认", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "确认当前计划", exact: true }).click(); await expect(page.locator(".status strong")).toHaveText("ready"); await page.getByRole("button", { name: "执行并生成文件" }).click(); await expect(page.locator(".status strong")).toHaveText("completed");
@@ -77,8 +79,40 @@ test("库存：映射计算、网页修正和排除、审计历史、已发布�
   await page.getByRole("button", { name: "新建任务", exact: true }).click(); await page.locator('input[type="file"]').setInputFiles({ name: "库存.csv", mimeType: "text/csv", buffer: Buffer.from("SKU,数量\nD,5\n") }); await page.getByRole("button", { name: "上传并分析" }).click(); await expect(page.getByText("结构分析完成", { exact: true })).toBeVisible();
   await page.locator(".rule-builder summary").click(); await builder.getByLabel("复用规则", { exact: true }).selectOption(`${first.generic.rules.id}@1`); await builder.getByLabel("复用目标模板", { exact: true }).selectOption(`${first.generic.template.id}@1`); await builder.getByRole("button", { name: "绑定表单计划" }).click(); await expect(page.getByText("表单计划已绑定，请完整预演", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "完整预演" }).click(); await expect(page.locator(".table").filter({ has: page.getByText("双倍数量", { exact: true }) })).toContainText("10");
+  await page.getByRole("button", { name: "上一步" }).click();
   await builder.getByLabel("规则名称", { exact: true }).fill("库存修订"); await expect(builder.getByRole("button", { name: "绑定表单计划" })).toBeDisabled();
   await builder.getByRole("button", { name: "校验并保存表单配置" }).click(); await expect(builder.locator(".diff").first()).toContainText("库存修订"); await expect(builder.locator(".template-diff")).toBeVisible();
   await builder.getByRole("button", { name: "确认并发布表单规则" }).click(); await expect(page.getByText("表单规则已确认并发布", { exact: true })).toBeVisible();
   const revisions = await (await page.request.get(`${base}/api/rules`)).json(); expect(revisions.find((rule: any) => rule.id === first.generic.rules.id && rule.version === 2).name).toBe("库存修订");
+});
+
+test("去重：表单配置与黄金文件比对", async ({ page }) => {
+  const id = await upload(page, [["库存.csv", "SKU,数量\nA,2\nA,2\nB,3\n"]]);
+  const builder = page.locator(".rule-builder");
+  await builder.getByLabel("来源身份", { exact: true }).fill("test:dedup");
+  await builder.getByRole("button", { name: "去重", exact: true }).click();
+  await output(builder, "s1c1", "SKU"); await output(builder, "s1c2", "数量");
+  const task = await publishAndRun(page, id, [["A", "2"], ["B", "3"]]);
+  expect(task.generic.result.exceptions).toBe(0);
+});
+
+test("余额分配：表单配置与黄金文件比对", async ({ page }) => {
+  const id = await upload(page, [["余额.csv", "工号,余额,请假\n001,10,6\n001,10,8\n"]]);
+  const builder = page.locator(".rule-builder");
+  await builder.getByLabel("来源身份", { exact: true }).fill("test:alloc");
+  await builder.getByRole("button", { name: "添加转换", exact: true }).click();
+  const convert = builder.locator("fieldset").nth(0);
+  await convert.getByLabel("字段", { exact: true }).selectOption("s1c2");
+  await convert.getByLabel("目标类型").selectOption("integer");
+  await convert.getByRole("button", { name: "增加转换字段" }).click();
+  await convert.getByLabel("字段", { exact: true }).nth(1).selectOption("s1c3");
+  await convert.getByLabel("目标类型").nth(1).selectOption("integer");
+  await builder.getByRole("button", { name: "余额分配", exact: true }).click();
+  const alloc = builder.locator("fieldset").nth(1);
+  await alloc.getByLabel("分组字段（逗号分隔）").fill("s1c1");
+  await alloc.getByLabel("余额字段").selectOption("s1c2");
+  await alloc.getByLabel("需求字段").selectOption("s1c3");
+  await output(builder, "s1c1", "工号"); await output(builder, "allocated", "年假"); await output(builder, "fallback", "事假");
+  const task = await publishAndRun(page, id, [["001", "6", "0"], ["001", "4", "4"]]);
+  expect(task.generic.result.exceptions).toBe(0);
 });

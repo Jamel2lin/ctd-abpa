@@ -2,6 +2,7 @@ import { ProcessPlanSchema, ProcessPlanV2Schema, ProcessPlanV3Schema, RuleDraftS
 import { z } from "zod";
 import { createModelProvider, ModelResponseError, type ModelCallBudget, type ModelCallResult, type ModelProvider, type ModelProviderId } from "./providers.js";
 import { redactInstruction } from "./security.js";
+import { detectOperation } from "./plan.js";
 
 function assertInstructionCoverage(instruction: string, steps: Array<{ operator: string }>): void {
   const required: Array<[RegExp, string]> = [
@@ -204,7 +205,14 @@ export async function suggestPlanDetailed(context: ModelPlanContext, providerId 
         example: { version: 1, operation: "oa_leave_to_hr", sources: {}, filters: [], allowStaleBalance: false },
         budget,
       });
-      const plan = ProcessPlanSchema.parse({ ...redacted.restore(result.value), sources: context.sources, confirmedBy: undefined });
+      const restored = redacted.restore(result.value);
+      const validOperations = ["erp_overtime_to_hr", "oa_leave_to_hr", "annual_leave_settlement"];
+      let operation = restored.operation;
+      try {
+        const detected = detectOperation(context.instruction);
+        if (validOperations.includes(operation) && operation !== detected) operation = detected;
+      } catch { /* 无法确定性判定时保留模型判定的操作类型 */ }
+      const plan = ProcessPlanSchema.parse({ ...restored, operation, sources: context.sources, confirmedBy: undefined, settlement: operation === "annual_leave_settlement" ? {} : undefined });
       if (/(?:审批|姓名|工号|员工|人员|只保留|仅保留|筛选|过滤)/.test(context.instruction) && !plan.filters.length) throw new Error("指令筛选条件未落实为有效规则");
       const { value: _value, ...call } = result; void _value;
       return { plan, call, repairRounds };

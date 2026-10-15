@@ -25,6 +25,12 @@ export function sourceIdentityScope(system: string, reportType: string): string 
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(scope) ? scope : `source-${createHash("sha256").update(`${system.trim()}\u0000${reportType.trim()}`).digest("hex").slice(0, 24)}`;
 }
 
+export function canonicalField(field: string): string {
+  if (field in FIELD_ALIASES) return field;
+  for (const [standard, aliases] of Object.entries(FIELD_ALIASES)) if (aliases.includes(field)) return standard;
+  return field;
+}
+
 export function matchFields(headers: string[], userAliases: Record<string, string[]> = {}): Record<string, number> {
   const result: Record<string, number> = {};
   const normalized = headers.map((h) => h.trim());
